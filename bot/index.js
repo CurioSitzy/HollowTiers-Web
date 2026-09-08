@@ -88,6 +88,13 @@ const TIER_ROLES = {
     HT4: '1502540940555059200', LT4: '1502540935819563178',
     HT5: '1502540941582667786', LT5: '1502540936385794179',
   },
+  'Diamond SMP': {
+    HT1: '1500755032478322759', LT1: '1500479159468822558',
+    HT2: '1500755019715313756', LT2: '1500479159456235539',
+    HT3: '1500755021904744478', LT3: '1500480067242033323',
+    HT4: '1500755024874180628', LT4: '1500479978884825349',
+    HT5: '1500755027587764325', LT5: '1500480104046919711',
+  },
   'Pot': {
     HT1: '1502312007460847616', LT1: '1502311997591781516',
     HT2: '1502312008580858088', LT2: '1502312002775941332',
@@ -193,6 +200,7 @@ client.on('interactionCreate', async interaction => {
       if (gamemodeIdFormatted === 'netherite op') gamemodeIdFormatted = 'nethpot';
       else if (gamemodeIdFormatted === 'pot') gamemodeIdFormatted = 'diapot';
       else if (gamemodeIdFormatted === 'spear mace') gamemodeIdFormatted = 'spear';
+      else if (gamemodeIdFormatted === 'diamond smp') gamemodeIdFormatted = 'diasmp'; // Formatting Diamond SMP
       else if (gamemodeIdFormatted === 'vanilla') gamemodeIdFormatted = 'crystal'; // Vanilla dikirim sebagai crystal
 
       // Upsert Tier
