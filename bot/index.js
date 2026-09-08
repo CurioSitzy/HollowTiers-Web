@@ -118,82 +118,8 @@ const TIER_ROLES = {
   }
 };
 
-// Pendaftaran Semua Command
-const commands = [
-  // 1. COMMAND TESTRESULT
-  new SlashCommandBuilder()
-    .setName('testresult')
-    .setDescription('Send a player tier test result')
-    .addUserOption(option => 
-      option.setName('player')
-        .setDescription('The player who was tested')
-        .setRequired(true))
-    .addUserOption(option => 
-      option.setName('tester')
-        .setDescription('The tester who conducted the test')
-        .setRequired(true))
-    .addStringOption(option => 
-      option.setName('region')
-        .setDescription('Region (e.g. NA, EU, AS, AU)')
-        .setRequired(true)
-        .addChoices(
-          { name: 'NA', value: 'NA' },
-          { name: 'EU', value: 'EU' },
-          { name: 'AS', value: 'AS' },
-          { name: 'AU', value: 'AU' },
-          { name: 'SA', value: 'SA' }
-        ))
-    .addStringOption(option => 
-      option.setName('username')
-        .setDescription('Minecraft IGN / Username')
-        .setRequired(true))
-    .addStringOption(option => 
-      option.setName('gamemode')
-        .setDescription('Gamemode / Tier Test')
-        .setRequired(true)
-        .addChoices(
-          { name: 'Sword', value: 'Sword' },
-          { name: 'Axe', value: 'Axe' },
-          { name: 'Crystal', value: 'Crystal' },
-          { name: 'Vanilla', value: 'Vanilla' },
-          { name: 'SMP', value: 'SMP' },
-          { name: 'Pot', value: 'Pot' },
-          { name: 'UHC', value: 'UHC' },
-          { name: 'Netherite OP', value: 'Netherite OP' },
-          { name: 'Cart', value: 'Cart' },
-          { name: 'Spear Mace', value: 'Spear Mace' }
-        ))
-    .addStringOption(option => 
-      option.setName('previous_rank')
-        .setDescription('Previous rank')
-        .setRequired(true)
-        .addChoices(...RANK_CHOICES))
-    .addStringOption(option => 
-      option.setName('rank_earned')
-        .setDescription('Rank earned')
-        .setRequired(true)
-        .addChoices(...RANK_CHOICES.filter(choice => choice.value !== 'N/A'))),
-
-  // 2. COMMAND SETUP (GABUNGAN)
-  new SlashCommandBuilder()
-    .setName('setup')
-    .setDescription('Setup configuration command for the server')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-];
-
-const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
-
-client.once('ready', async () => {
+client.once('ready', () => {
   console.log(`🤖 Bot HollowTiers Online as ${client.user.tag}`);
-  try {
-    await rest.put(
-      Routes.applicationCommands(client.user.id),
-      { body: commands }
-    );
-    console.log('✅ Slash commands (/testresult & /setup) registered!');
-  } catch (error) {
-    console.error('❌ Failed to register slash commands:', error);
-  }
 });
 
 client.on('interactionCreate', async interaction => {
@@ -202,7 +128,9 @@ client.on('interactionCreate', async interaction => {
   // --- LOGIKA COMMAND: /testresult ---
   if (interaction.commandName === 'testresult') {
     try {
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      }
     } catch (err) {
       console.error('❌ Failed to defer reply:', err);
       return;
@@ -257,7 +185,7 @@ client.on('interactionCreate', async interaction => {
           .eq('id', playerDb.id);
       }
 
-      // Format gamemode ID agar sesuai persis dengan frontend website
+      // Format gamemode ID
       let gamemodeIdFormatted = gamemode.toLowerCase().trim();
       if (gamemodeIdFormatted === 'netherite op') gamemodeIdFormatted = 'nethpot';
       else if (gamemodeIdFormatted === 'pot') gamemodeIdFormatted = 'diapot';
