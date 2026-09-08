@@ -104,14 +104,11 @@ export default function Home() {
   // Filter and sort players based on selected gamemode tab
   const getFilteredPlayers = () => {
     if (activeTab === 'overall') {
-      // For Overall: return all players sorted by points
       return players;
     }
 
-    // For specific Gamemode: get players who have a tier in this gamemode
     const filtered = players.filter((player) => player.tiers?.[activeTab]);
 
-    // Sort by highest tier (HT1 at top)
     return filtered.sort((a, b) => {
       const tierA = a.tiers[activeTab];
       const tierB = b.tiers[activeTab];
@@ -119,7 +116,6 @@ export default function Home() {
       const indexA = TIER_RANKING.indexOf(tierA);
       const indexB = TIER_RANKING.indexOf(tierB);
 
-      // If tier is not in TIER_RANKING list, place at bottom
       const rankA = indexA !== -1 ? indexA : 999;
       const rankB = indexB !== -1 ? indexB : 999;
 
@@ -130,10 +126,28 @@ export default function Home() {
   const filteredPlayers = getFilteredPlayers();
 
   const getRankBadge = (index) => {
-    if (index === 0) return <span className="text-2xl">🥇</span>;
+    if (index === 0) return <span className="text-3xl animate-bounce">👑</span>;
     if (index === 1) return <span className="text-2xl">🥈</span>;
     if (index === 2) return <span className="text-2xl">🥉</span>;
     return <span className="font-extrabold text-zinc-500 text-lg">{index + 1}.</span>;
+  };
+
+  // Helper styling khusus untuk Top 3
+  const getTop3Style = (index) => {
+    if (index === 0) {
+      // Juara 1: Emas (Gold)
+      return 'bg-gradient-to-r from-amber-950/60 via-zinc-900 to-amber-950/30 border-amber-500/80 shadow-[0_0_20px_rgba(245,158,11,0.2)] hover:border-amber-400 scale-[1.01]';
+    }
+    if (index === 1) {
+      // Juara 2: Perak (Silver)
+      return 'bg-gradient-to-r from-slate-900 via-zinc-900 to-slate-900/50 border-slate-400/70 shadow-[0_0_15px_rgba(148,163,184,0.15)] hover:border-slate-300';
+    }
+    if (index === 2) {
+      // Juara 3: Perunggu (Bronze)
+      return 'bg-gradient-to-r from-orange-950/40 via-zinc-900 to-orange-950/20 border-amber-700/70 shadow-[0_0_15px_rgba(180,83,9,0.15)] hover:border-amber-600';
+    }
+    // Player biasa
+    return 'bg-zinc-900/80 border-zinc-800/80 hover:border-zinc-700';
   };
 
   return (
@@ -205,65 +219,79 @@ export default function Home() {
             <div className="text-center text-zinc-500 py-12">Loading rankings...</div>
           ) : filteredPlayers.length > 0 ? (
             <div className="flex flex-col gap-3">
-              {filteredPlayers.map((player, index) => (
-                <div
-                  key={player.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between bg-zinc-900/80 border border-zinc-800/80 hover:border-zinc-700 p-4 rounded-2xl transition gap-4"
-                >
-                  {/* Left: Rank, Avatar, IGN, Region, Points */}
-                  <div className="flex items-center gap-4">
-                    <div className="w-8 flex justify-center">{getRankBadge(index)}</div>
-                    <img
-                      src={`https://mc-heads.net/avatar/${player.ign}/40`}
-                      alt={player.ign}
-                      className="w-10 h-10 rounded-xl bg-zinc-800"
-                    />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-white text-base">{player.ign}</h3>
-                        {/* Region Badge */}
-                        <RegionBadge region={player.region} />
+              {filteredPlayers.map((player, index) => {
+                const isTop3 = index < 3;
+                return (
+                  <div
+                    key={player.id}
+                    className={`flex flex-col sm:flex-row sm:items-center justify-between border p-4 rounded-2xl transition gap-4 relative overflow-hidden ${getTop3Style(index)}`}
+                  >
+                    {/* Visual Tag Top 1/2/3 */}
+                    {index === 0 && (
+                      <div className="absolute top-0 right-0 bg-amber-500 text-black text-[9px] font-black px-3 py-0.5 rounded-bl-lg uppercase tracking-wider shadow">
+                        #1 Champion
                       </div>
-                      <p className="text-xs text-zinc-400 mt-0.5">
-                        {activeTab === 'overall'
-                          ? `${player.points || 0} points`
-                          : `Tier: ${player.tiers[activeTab]}`}
-                      </p>
-                    </div>
-                  </div>
+                    )}
 
-                  {/* Right: Tiers Breakdown Per Gamemode */}
-                  <div className="flex items-center gap-3 overflow-x-auto py-1">
-                    {GAMEMODES_LIST.filter((gm) => gm.id !== 'overall').map((gm) => {
-                      const tier = player.tiers?.[gm.id];
-                      const isCurrentTab = gm.id === activeTab;
-                      return (
-                        <div
-                          key={gm.id}
-                          className={`flex flex-col items-center min-w-[36px] p-1 rounded-lg ${
-                            isCurrentTab ? 'bg-red-950/60 border border-red-800/60' : ''
-                          }`}
-                        >
-                          <img
-                            src={gm.icon}
-                            alt={gm.name}
-                            className={`w-5 h-5 mb-1 object-contain ${
-                              isCurrentTab ? 'opacity-100 scale-110' : 'opacity-70'
-                            }`}
-                          />
-                          <span
-                            className={`text-[10px] font-black ${
-                              tier ? 'text-purple-400' : 'text-zinc-600'
+                    {/* Left: Rank, Avatar, IGN, Region, Points */}
+                    <div className="flex items-center gap-4">
+                      <div className="w-8 flex justify-center">{getRankBadge(index)}</div>
+                      <img
+                        src={`https://mc-heads.net/avatar/${player.ign}/40`}
+                        alt={player.ign}
+                        className={`w-10 h-10 rounded-xl bg-zinc-800 ${
+                          index === 0 ? 'ring-2 ring-amber-400/80' : ''
+                        }`}
+                      />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className={`font-bold text-base ${index === 0 ? 'text-amber-300' : 'text-white'}`}>
+                            {player.ign}
+                          </h3>
+                          {/* Region Badge */}
+                          <RegionBadge region={player.region} />
+                        </div>
+                        <p className="text-xs text-zinc-400 mt-0.5">
+                          {activeTab === 'overall'
+                            ? `${player.points || 0} points`
+                            : `Tier: ${player.tiers[activeTab]}`}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Right: Tiers Breakdown Per Gamemode */}
+                    <div className="flex items-center gap-3 overflow-x-auto py-1">
+                      {GAMEMODES_LIST.filter((gm) => gm.id !== 'overall').map((gm) => {
+                        const tier = player.tiers?.[gm.id];
+                        const isCurrentTab = gm.id === activeTab;
+                        return (
+                          <div
+                            key={gm.id}
+                            className={`flex flex-col items-center min-w-[36px] p-1 rounded-lg ${
+                              isCurrentTab ? 'bg-red-950/60 border border-red-800/60' : ''
                             }`}
                           >
-                            {tier || '-'}
-                          </span>
-                        </div>
-                      );
-                    })}
+                            <img
+                              src={gm.icon}
+                              alt={gm.name}
+                              className={`w-5 h-5 mb-1 object-contain ${
+                                isCurrentTab ? 'opacity-100 scale-110' : 'opacity-70'
+                              }`}
+                            />
+                            <span
+                              className={`text-[10px] font-black ${
+                                tier ? 'text-purple-400' : 'text-zinc-600'
+                              }`}
+                            >
+                              {tier || '-'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="text-center text-zinc-500 py-12 italic">
