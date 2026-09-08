@@ -40,7 +40,6 @@ function PlayerModal({ player, gamemodes, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn">
       <div className="relative w-full max-w-md bg-zinc-950 border border-zinc-800/90 rounded-3xl p-6 shadow-2xl text-white">
-        {/* Close Button Top Right */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-full w-8 h-8 flex items-center justify-center transition"
@@ -48,7 +47,6 @@ function PlayerModal({ player, gamemodes, onClose }) {
           ✕
         </button>
 
-        {/* Player Avatar Header */}
         <div className="flex flex-col items-center text-center mt-2">
           <div className="relative w-20 h-20 rounded-2xl p-1 bg-gradient-to-b from-red-600 to-red-950 shadow-[0_0_25px_rgba(220,38,38,0.4)] mb-3">
             <img
@@ -61,7 +59,6 @@ function PlayerModal({ player, gamemodes, onClose }) {
           <p className="text-xs text-zinc-400 font-medium">HollowTiers Ranked Player</p>
         </div>
 
-        {/* Overall Rating Box */}
         <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4 my-5 flex items-center justify-between">
           <div>
             <h4 className="text-[11px] font-extrabold text-zinc-400 uppercase tracking-wider">
@@ -70,7 +67,6 @@ function PlayerModal({ player, gamemodes, onClose }) {
             <p className="text-xs text-zinc-500 font-medium">Across all gamemodes</p>
           </div>
           <div className="text-right">
-            {/* Mengganti Unranked menjadi Ranked */}
             <span className="text-2xl font-black block leading-none">Ranked</span>
             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
               {player.points || 0} POINTS
@@ -78,12 +74,11 @@ function PlayerModal({ player, gamemodes, onClose }) {
           </div>
         </div>
 
-        {/* Gamemodes Grid Tiers */}
         <div className="grid grid-cols-4 gap-2.5 mb-6">
           {gamemodes
             .filter((gm) => gm.id !== 'overall')
             .map((gm) => {
-              const targetKey = gm.id === 'overall' ? 'crystal' : gm.id;
+              const targetKey = gm.id === 'vanilla' ? 'crystal' : gm.id;
               const tier = player.tiers?.[targetKey];
               return (
                 <div
@@ -108,7 +103,6 @@ function PlayerModal({ player, gamemodes, onClose }) {
             })}
         </div>
 
-        {/* Red Close Button */}
         <button
           onClick={onClose}
           className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-2xl transition duration-200 shadow-lg shadow-red-950/50 text-sm"
@@ -120,8 +114,10 @@ function PlayerModal({ player, gamemodes, onClose }) {
   );
 }
 
+// Menambahkan Vanilla secara terpisah dari Overall
 const GAMEMODES_LIST = [
-  { id: 'overall', name: 'Overall', icon: '/icon/vanilla.png' },
+  { id: 'overall', name: 'Overall', icon: '🏆' },
+  { id: 'vanilla', name: 'Vanilla', icon: '/icon/vanilla.png' },
   { id: 'sword', name: 'Sword', icon: '/icon/sword.png' },
   { id: 'axe', name: 'Axe', icon: '/icon/axe.png' },
   { id: 'mace', name: 'Mace', icon: '/icon/mace.png' },
@@ -149,7 +145,6 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlayer, setSelectedPlayer] = useState(null);
 
-  // Mengubah Nama Judul Tab Website di Browser
   useEffect(() => {
     document.title = 'HollowTiers - Leaderboard';
   }, []);
@@ -191,11 +186,10 @@ export default function Home() {
     fetchData();
   }, []);
 
-  // Filter & Search Logic
   const getFilteredPlayers = () => {
     let result = players;
 
-    const targetGamemode = activeTab === 'overall' ? 'crystal' : activeTab;
+    const targetGamemode = activeTab === 'vanilla' ? 'crystal' : activeTab;
 
     if (activeTab !== 'overall') {
       result = result.filter((player) => player.tiers?.[targetGamemode]);
@@ -261,7 +255,6 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white p-4 md:p-8 font-sans">
-      {/* Modal Player Pop-up */}
       <PlayerModal
         player={selectedPlayer}
         gamemodes={GAMEMODES_LIST}
@@ -269,7 +262,6 @@ export default function Home() {
       />
 
       <div className="max-w-6xl mx-auto space-y-6">
-        {/* Top Navbar */}
         <header className="flex flex-wrap items-center justify-between gap-4 bg-zinc-900/60 p-4 rounded-2xl border border-zinc-800/80 backdrop-blur">
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-black tracking-wider text-red-500 uppercase">
@@ -284,7 +276,6 @@ export default function Home() {
             <a href="#" className="hover:text-white">💬 Discord</a>
           </nav>
 
-          {/* Search Bar dengan fitur Enter */}
           <div className="flex items-center gap-3">
             <input
               type="text"
@@ -297,8 +288,8 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Gamemodes Selector Tabs */}
-        <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-10 gap-2">
+        {/* Dynamic Grid Layout untuk Menampung 11 Tab */}
+        <div className="grid grid-cols-3 sm:grid-cols-6 md:grid-cols-11 gap-2">
           {GAMEMODES_LIST.map((gm) => (
             <button
               key={gm.id}
@@ -309,19 +300,21 @@ export default function Home() {
                   : 'bg-zinc-900/40 border-zinc-800/60 text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200'
               }`}
             >
-              <img
-                src={gm.icon}
-                alt={gm.name}
-                className="w-6 h-6 mb-1 object-contain drop-shadow"
-              />
+              {gm.icon.startsWith('/') ? (
+                <img
+                  src={gm.icon}
+                  alt={gm.name}
+                  className="w-6 h-6 mb-1 object-contain drop-shadow"
+                />
+              ) : (
+                <span className="text-lg mb-1">{gm.icon}</span>
+              )}
               <span className="text-xs font-bold">{gm.name}</span>
             </button>
           ))}
         </div>
 
-        {/* Leaderboard Table */}
         <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-4 md:p-6">
-          {/* Table Header */}
           <div className="flex items-center justify-between text-xs font-black tracking-wider text-red-500 uppercase pb-4 px-4 border-b border-zinc-800/80 mb-4">
             <div className="flex items-center gap-6">
               <span className="w-8">#</span>
@@ -334,7 +327,6 @@ export default function Home() {
             </span>
           </div>
 
-          {/* Player Rows */}
           {loading ? (
             <div className="text-center text-zinc-500 py-12">Loading rankings...</div>
           ) : filteredPlayers.length > 0 ? (
@@ -353,7 +345,6 @@ export default function Home() {
                     </div>
                   )}
 
-                  {/* Left: Rank, Avatar, IGN, Region, Points */}
                   <div className="flex items-center gap-4">
                     <div className="w-8 flex justify-center">{getRankBadge(player.originalRank)}</div>
                     <img
@@ -377,15 +368,14 @@ export default function Home() {
                       <p className="text-xs text-zinc-400 mt-0.5">
                         {activeTab === 'overall'
                           ? `${player.points || 0} points`
-                          : `Tier: ${player.tiers[activeTab === 'overall' ? 'crystal' : activeTab]}`}
+                          : `Tier: ${player.tiers[activeTab === 'vanilla' ? 'crystal' : activeTab]}`}
                       </p>
                     </div>
                   </div>
 
-                  {/* Right: Tiers Breakdown Per Gamemode */}
                   <div className="flex items-center gap-3 overflow-x-auto py-1">
                     {GAMEMODES_LIST.filter((gm) => gm.id !== 'overall').map((gm) => {
-                      const targetKey = gm.id === 'overall' ? 'crystal' : gm.id;
+                      const targetKey = gm.id === 'vanilla' ? 'crystal' : gm.id;
                       const tier = player.tiers?.[targetKey];
                       const isCurrentTab = gm.id === activeTab;
                       return (
