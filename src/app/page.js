@@ -70,7 +70,8 @@ function PlayerModal({ player, gamemodes, onClose }) {
             <p className="text-xs text-zinc-500 font-medium">Across all gamemodes</p>
           </div>
           <div className="text-right">
-            <span className="text-2xl font-black block leading-none">Unranked</span>
+            {/* Mengganti Unranked menjadi Ranked */}
+            <span className="text-2xl font-black block leading-none">Ranked</span>
             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
               {player.points || 0} POINTS
             </span>
@@ -82,7 +83,6 @@ function PlayerModal({ player, gamemodes, onClose }) {
           {gamemodes
             .filter((gm) => gm.id !== 'overall')
             .map((gm) => {
-              // Membaca key 'overall' sebagai 'crystal' dari database
               const targetKey = gm.id === 'overall' ? 'crystal' : gm.id;
               const tier = player.tiers?.[targetKey];
               return (
@@ -149,6 +149,11 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlayer, setSelectedPlayer] = useState(null);
 
+  // Mengubah Nama Judul Tab Website di Browser
+  useEffect(() => {
+    document.title = 'HollowTiers - Leaderboard';
+  }, []);
+
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
@@ -190,7 +195,6 @@ export default function Home() {
   const getFilteredPlayers = () => {
     let result = players;
 
-    // Menentukan tab mana yang dipilih (jika tab 'overall', petakan ke 'crystal' di database untuk kategori single-gamemode)
     const targetGamemode = activeTab === 'overall' ? 'crystal' : activeTab;
 
     if (activeTab !== 'overall') {
@@ -210,13 +214,11 @@ export default function Home() {
       });
     }
 
-    // Tetapkan nomor rank asli (originalRank) SEBELUM difilter oleh pencarian
     const rankedResult = result.map((player, index) => ({
       ...player,
       originalRank: index
     }));
 
-    // Filter berdasarkan search input tanpa mengubah originalRank
     if (searchQuery.trim() !== '') {
       return rankedResult.filter((p) =>
         p.ign.toLowerCase().includes(searchQuery.toLowerCase().trim())
@@ -226,7 +228,6 @@ export default function Home() {
     return rankedResult;
   };
 
-  // Handler saat menekan Enter di search bar
   const handleSearchKeyDown = (e) => {
     if (e.key === 'Enter') {
       const filtered = getFilteredPlayers();
@@ -238,7 +239,6 @@ export default function Home() {
 
   const filteredPlayers = getFilteredPlayers();
 
-  // Memakai originalRank agar badge crown & angka tidak terikat ke index array hasil filter
   const getRankBadge = (rankIndex) => {
     if (rankIndex === 0) return <span className="text-3xl animate-bounce">👑</span>;
     if (rankIndex === 1) return <span className="text-2xl">🥈</span>;
