@@ -1,12 +1,19 @@
 require('dotenv').config({ path: '.env.local' });
+require('dotenv').config(); // Fallback membaca variabel environment Railway/Root .env
+
 const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } = require('discord.js');
 const { createClient } = require('@supabase/supabase-js');
 
+// Ambil variabel environment (Mendukung Railway & .env.local)
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  console.error('❌ Error: SUPABASE_URL atau SUPABASE_SERVICE_ROLE_KEY tidak terdeteksi!');
+}
+
 // Inisialisasi koneksi Supabase
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
@@ -19,11 +26,11 @@ const TIER_POINTS = {
   'HT5': 10,  'LT5': 5,
 };
 
-// Pilihan Slash Command /addtier
+// Pilihan Slash Command /testresults
 const commands = [
   new SlashCommandBuilder()
-    .setName('addtier')
-    .setDescription('Add or update a player tier rank')
+    .setName('testresults')
+    .setDescription('Submit test results and update player tier rank')
     .addStringOption(option =>
       option.setName('ign')
         .setDescription('Minecraft In-Game Name')
@@ -74,17 +81,17 @@ client.once('ready', async () => {
       Routes.applicationCommands(client.user.id),
       { body: commands }
     );
-    console.log('✅ Slash command /addtier successfully registered!');
+    console.log('✅ Slash command /testresults successfully registered!');
   } catch (error) {
-    console.error('Failed to register slash commands:', error);
+    console.error('❌ Failed to register slash commands:', error);
   }
 });
 
-// Event ketika perintah /addtier diketik di Discord
+// Event ketika perintah /testresults diketik di Discord
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
-  if (interaction.commandName === 'addtier') {
+  if (interaction.commandName === 'testresults') {
     await interaction.deferReply();
 
     const ign = interaction.options.getString('ign');
@@ -92,13 +99,20 @@ client.on('interactionCreate', async interaction => {
     const tier = interaction.options.getString('tier');
 
     try {
-      // 1. Cek atau buat data player di tabel players
-      let { data: player } = await supabase
+      // 1. Cek data player tanpa menggunakan .single() agar tidak throw error jika kosong
+      const { data: existingPlayers, error: fetchError } = await supabase
         .from('players')
         .select('*')
-        .eq('ign', ign)
-        .single();
+        .eq('ign', ign);
 
+      if (fetchError) {
+        console.error('❌ Error fetching player:', fetchError);
+        throw fetchError;
+      }
+
+      let player = existingPlayers && existingPlayers.length > 0 ? existingPlayers[0] : null;
+
+      // Buat player baru jika belum ada
       if (!player) {
         const { data: newPlayer, error: createError } = await supabase
           .from('players')
@@ -106,7 +120,10 @@ client.on('interactionCreate', async interaction => {
           .select()
           .single();
 
-        if (createError) throw createError;
+        if (createError) {
+          console.error('❌ Error creating player:', createError);
+          throw createError;
+        }
         player = newPlayer;
       }
 
@@ -122,13 +139,20 @@ client.on('interactionCreate', async interaction => {
           { onConflict: 'player_id, gamemode_id' }
         );
 
-      if (tierError) throw tierError;
+      if (tierError) {
+        console.error('❌ Error upserting player tier:', tierError);
+        throw tierError;
+      }
 
       // 3. Hitung ulang total poin player dari seluruh gamemode
-      const { data: allTiers } = await supabase
+      const { data: allTiers, error: allTiersError } = await supabase
         .from('player_tiers')
         .select('tier')
         .eq('player_id', player.id);
+
+      if (allTiersError) {
+        console.error('❌ Error fetching all tiers:', allTiersError);
+      }
 
       let totalPoints = 0;
       if (allTiers) {
@@ -138,17 +162,23 @@ client.on('interactionCreate', async interaction => {
       }
 
       // Update total poin terbaru ke tabel players
-      await supabase
+      const { error: updatePointsError } = await supabase
         .from('players')
         .update({ points: totalPoints })
         .eq('id', player.id);
+
+      if (updatePointsError) {
+        console.error('❌ Error updating total points:', updatePointsError);
+      }
+
+      console.log(`✅ [Supabase Direct Log] Success update for ${ign}`);
 
       await interaction.editReply(
         `✅ Success! Updated **${ign}** -> **${tier}** in **${gamemode.toUpperCase()}** (Total Points: ${totalPoints})`
       );
     } catch (err) {
-      console.error(err);
-      await interaction.editReply(`❌ Error updating database: ${err.message}`);
+      console.error('❌ System Catch Error:', err);
+      await interaction.editReply(`❌ Error updating database: ${err.message || 'Unknown Error'}`);
     }
   }
 });
