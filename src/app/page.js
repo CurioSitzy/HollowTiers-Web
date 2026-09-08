@@ -3,6 +3,36 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
+// Komponen Badge Region
+function RegionBadge({ region }) {
+  const getRegionColor = (reg) => {
+    switch (reg?.toUpperCase()) {
+      case 'NA':
+        return 'bg-red-950/80 text-red-400 border-red-800/50';
+      case 'EU':
+        return 'bg-blue-950/80 text-blue-400 border-blue-800/50';
+      case 'AS':
+        return 'bg-yellow-950/80 text-yellow-400 border-yellow-800/50';
+      case 'AU':
+        return 'bg-green-950/80 text-green-400 border-green-800/50';
+      case 'SA':
+        return 'bg-purple-950/80 text-purple-400 border-purple-800/50';
+      default:
+        return 'bg-zinc-800 text-zinc-400 border-zinc-700';
+    }
+  };
+
+  return (
+    <span
+      className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[11px] font-black border tracking-wider ${getRegionColor(
+        region
+      )}`}
+    >
+      {region ? region.toUpperCase() : 'N/A'}
+    </span>
+  );
+}
+
 const GAMEMODES_LIST = [
   { id: 'overall', name: 'Overall', icon: '/icon/vanilla.png' },
   { id: 'sword', name: 'Sword', icon: '/icon/sword.png' },
@@ -180,7 +210,7 @@ export default function Home() {
                   key={player.id}
                   className="flex flex-col sm:flex-row sm:items-center justify-between bg-zinc-900/80 border border-zinc-800/80 hover:border-zinc-700 p-4 rounded-2xl transition gap-4"
                 >
-                  {/* Left: Rank, Avatar, IGN, Points */}
+                  {/* Left: Rank, Avatar, IGN, Region, Points */}
                   <div className="flex items-center gap-4">
                     <div className="w-8 flex justify-center">{getRankBadge(index)}</div>
                     <img
@@ -189,8 +219,12 @@ export default function Home() {
                       className="w-10 h-10 rounded-xl bg-zinc-800"
                     />
                     <div>
-                      <h3 className="font-bold text-white text-base">{player.ign}</h3>
-                      <p className="text-xs text-zinc-400">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-white text-base">{player.ign}</h3>
+                        {/* Region Badge */}
+                        <RegionBadge region={player.region} />
+                      </div>
+                      <p className="text-xs text-zinc-400 mt-0.5">
                         {activeTab === 'overall'
                           ? `${player.points || 0} points`
                           : `Tier: ${player.tiers[activeTab]}`}
