@@ -14,11 +14,9 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 
-// ID Channel
-const COMMAND_CHANNEL_ID = '1509184085015269516'; // #result-commands
-const OUTPUT_CHANNEL_ID = '1500797205382959164';  // #🏆・results
+const COMMAND_CHANNEL_ID = '1509184085015269516';
+const OUTPUT_CHANNEL_ID = '1500797205382959164';
 
-// Poin yang didapatkan player berdasarkan Tier
 const TIER_POINTS = {
   'HT1': 100, 'LT1': 80,
   'HT2': 60,  'LT2': 50,
@@ -27,7 +25,6 @@ const TIER_POINTS = {
   'HT5': 10,  'LT5': 5,
 };
 
-// Daftar pilihan Rank
 const RANK_CHOICES = [
   { name: 'N/A', value: 'N/A' },
   { name: 'LT5', value: 'LT5' },
@@ -42,7 +39,6 @@ const RANK_CHOICES = [
   { name: 'HT1', value: 'HT1' },
 ];
 
-// Mapping Role ID per Gamemode & Tier
 const TIER_ROLES = {
   'Crystal': {
     HT1: '1500746475448176793', LT1: '1500746484767789096',
@@ -183,7 +179,7 @@ client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === 'testresult') {
-    // 1. Panggil deferReply paling awal agar tidak timeout
+    // 1. Defer Reply Secepat Mungkin
     try {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     } catch (err) {
@@ -191,11 +187,11 @@ client.on('interactionCreate', async interaction => {
       return;
     }
 
-    // 2. Cek channel komando
+    // 2. Validasi Channel
     if (interaction.channelId !== COMMAND_CHANNEL_ID) {
       return await interaction.editReply({
         content: `❌ This command can only be used in <#${COMMAND_CHANNEL_ID}>!`
-      });
+      }).catch(console.error);
     }
 
     const player = interaction.options.getUser('player');
@@ -211,11 +207,11 @@ client.on('interactionCreate', async interaction => {
     if (!targetChannel) {
       return await interaction.editReply({
         content: `❌ Could not find output channel! Please check output channel ID.`
-      });
+      }).catch(console.error);
     }
 
     try {
-      // 3. DATABASE LOGIC (SUPABASE)
+      // 3. Database Logic
       const { data: existingPlayers, error: fetchError } = await supabase
         .from('players')
         .select('*')
@@ -241,10 +237,9 @@ client.on('interactionCreate', async interaction => {
           .eq('id', playerDb.id);
       }
 
-      // Format gamemode_id
+      // Format gamemode_id disesuaikan
       const gamemodeIdFormatted = gamemode.toLowerCase().replace(/\s+/g, '-');
 
-      // Upsert ke player_tiers (tester_id dihapus agar tidak melanggar schema Supabase)
       const { error: tierError } = await supabase
         .from('player_tiers')
         .upsert(
@@ -258,7 +253,7 @@ client.on('interactionCreate', async interaction => {
 
       if (tierError) throw tierError;
 
-      // Hitung ulang total poin
+      // Hitung total poin
       const { data: allTiers } = await supabase
         .from('player_tiers')
         .select('tier')
@@ -276,7 +271,7 @@ client.on('interactionCreate', async interaction => {
         .update({ points: totalPoints })
         .eq('id', playerDb.id);
 
-      // 4. AUTOMATIC ROLES
+      // 4. Role Update Logic
       const member = await interaction.guild.members.fetch(player.id).catch(() => null);
 
       if (member && TIER_ROLES[gamemode]) {
@@ -295,7 +290,7 @@ client.on('interactionCreate', async interaction => {
         }
       }
 
-      // 5. EMBED RESULTS
+      // 5. Embed Output
       const embed = new EmbedBuilder()
         .setColor(0xFF0000)
         .setAuthor({ 
@@ -314,29 +309,29 @@ client.on('interactionCreate', async interaction => {
 
       const resultMessage = await targetChannel.send({ content: `<@${player.id}>`, embeds: [embed] });
 
-      // 6. AUTOMATIC REACTION
+      // 6. Safe Reactions (Aman dari unhandled rejection)
       const emojis = ['🎉', '💀', '😱', '🔥', '🏆'];
-      const delay = ms => new Promise(res => setTimeout(res, ms));
+      (async () => {
+        for (const emoji of emojis) {
+          await resultMessage.react(emoji).catch(() => null);
+          await new Promise(res => setTimeout(res, 250));
+        }
+      })();
 
-      for (const emoji of emojis) {
-        await resultMessage.react(emoji).catch(err => console.error(`Failed to react ${emoji}:`, err));
-        await delay(250);
-      }
-
-      // 7. RESPONS AKHIR KE DISCORD
+      // 7. Balasan Sukses
       await interaction.editReply({
         content: `✅ Test result for **${username}** has been sent to <#${OUTPUT_CHANNEL_ID}> and saved to Database!`
-      });
+      }).catch(console.error);
 
       setTimeout(async () => {
-        await interaction.deleteReply().catch(err => console.error('Failed to delete reply:', err));
+        await interaction.deleteReply().catch(() => null);
       }, 2000);
 
     } catch (err) {
       console.error('❌ Error executing command:', err);
       await interaction.editReply({
         content: `❌ Error: ${err.message || 'Failed to process test result'}`
-      });
+      }).catch(console.error);
     }
   }
 });
