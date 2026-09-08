@@ -42,6 +42,15 @@ const RANK_CHOICES = [
   { name: 'HT1', value: 'HT1' },
 ];
 
+// Mapping Emoji / Bendera Region
+const REGION_FLAGS = {
+  'NA': '🇺🇸 NA',
+  'EU': '🇪🇺 EU',
+  'AS': '🇮🇩 AS',
+  'AU': '🇦🇺 AU',
+  'SA': '🇧🇷 SA'
+};
+
 // Mapping Role ID per Gamemode & Tier
 const TIER_ROLES = {
   'Crystal': {
@@ -241,7 +250,11 @@ client.on('interactionCreate', async interaction => {
           .eq('id', playerDb.id);
       }
 
-      const gamemodeIdFormatted = gamemode.toLowerCase().replace(/\s+/g, '-');
+      // Format slug gamemode agar cocok dengan frontend (misal: "Spear Mace" -> "spear-mace" / "nethpot")
+      let gamemodeIdFormatted = gamemode.toLowerCase().replace(/\s+/g, '-');
+      if (gamemodeIdFormatted === 'netherite-op') gamemodeIdFormatted = 'nethpot';
+      if (gamemodeIdFormatted === 'pot') gamemodeIdFormatted = 'diapot';
+      if (gamemodeIdFormatted === 'spear-mace') gamemodeIdFormatted = 'spear';
 
       const { error: tierError } = await supabase
         .from('player_tiers')
@@ -294,6 +307,8 @@ client.on('interactionCreate', async interaction => {
       }
 
       // 5. EMBED DI CHANNEL OUTPUT (#results)
+      const formattedRegion = REGION_FLAGS[region] || `\`${region}\``;
+
       const embed = new EmbedBuilder()
         .setColor(0xFF0000)
         .setAuthor({ 
@@ -301,14 +316,16 @@ client.on('interactionCreate', async interaction => {
           iconURL: player.displayAvatarURL() 
         })
         .addFields(
-          { name: 'Tester:', value: `<@${tester.id}>` },
-          { name: 'Region:', value: `\`${region}\`` },
-          { name: 'Username:', value: `\`${username}\`` },
-          { name: 'Previous Rank:', value: `\`${previousRank}\`` },
-          { name: 'Rank Earned:', value: `\`${rankEarned}\`` },
-          { name: 'Gamemode:', value: `\`${gamemode}\`` }
+          { name: 'Player:', value: `<@${player.id}>`, inline: true },
+          { name: 'Tester:', value: `<@${tester.id}>`, inline: true },
+          { name: 'Region:', value: formattedRegion, inline: true },
+          { name: 'Username:', value: `\`${username}\``, inline: true },
+          { name: 'Gamemode:', value: `\`${gamemode}\``, inline: true },
+          { name: 'Previous Rank:', value: `\`${previousRank}\``, inline: true },
+          { name: 'Rank Earned:', value: `\`${rankEarned}\``, inline: true }
         )
-        .setThumbnail(`https://visage.surgeplay.com/bust/512/${username}.png`);
+        .setThumbnail(`https://visage.surgeplay.com/bust/512/${username}.png`)
+        .setTimestamp();
 
       const resultMessage = await targetChannel.send({ content: `<@${player.id}>`, embeds: [embed] });
 
@@ -321,7 +338,7 @@ client.on('interactionCreate', async interaction => {
         }
       })();
 
-      // 7. EDIT INITIAL REPLY (Mengubah pesan "thinking..." jadi pesan sukses tanpa pesan baru)
+      // 7. EDIT INITIAL REPLY
       await interaction.editReply({
         content: `✅ Test result for **${username}** has been sent to <#${OUTPUT_CHANNEL_ID}> and saved to Database!`
       }).catch(console.error);
