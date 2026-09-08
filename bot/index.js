@@ -183,13 +183,16 @@ client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === 'testresult') {
-    // 1. Cek Channel Komando
+    // Cek Channel Komando
     if (interaction.channelId !== COMMAND_CHANNEL_ID) {
       return await interaction.reply({
         content: `❌ This command can only be used in <#${COMMAND_CHANNEL_ID}>!`,
         flags: MessageFlags.Ephemeral
       });
     }
+
+    // Tunda balasan agar Discord tidak timeout saat memproses Supabase
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const player = interaction.options.getUser('player');
     const tester = interaction.options.getUser('tester');
@@ -202,14 +205,13 @@ client.on('interactionCreate', async interaction => {
     const targetChannel = await interaction.client.channels.fetch(OUTPUT_CHANNEL_ID).catch(() => null);
 
     if (!targetChannel) {
-      return await interaction.reply({
-        content: `❌ Could not find output channel! Please check output channel ID.`,
-        flags: MessageFlags.Ephemeral
+      return await interaction.editReply({
+        content: `❌ Could not find output channel! Please check output channel ID.`
       });
     }
 
     try {
-      // 2. SUPABASE LOGIC - Update Data ke Database
+      // 1. SUPABASE LOGIC
       const { data: existingPlayers, error: fetchError } = await supabase
         .from('players')
         .select('*')
@@ -220,9 +222,10 @@ client.on('interactionCreate', async interaction => {
       let playerDb = existingPlayers && existingPlayers.length > 0 ? existingPlayers[0] : null;
 
       if (!playerDb) {
+        // PERBAIKAN: Menambahkan field 'type' agar tidak melanggar Not-Null Constraint Supabase
         const { data: newPlayer, error: createError } = await supabase
           .from('players')
-          .insert([{ ign: username, points: 0, region: region }])
+          .insert([{ ign: username, points: 0, region: region, type: 'Java' }])
           .select()
           .single();
 
@@ -268,7 +271,7 @@ client.on('interactionCreate', async interaction => {
         .update({ points: totalPoints })
         .eq('id', playerDb.id);
 
-      // 3. AUTOMATIC ROLES - Beri Role Discord
+      // 2. AUTOMATIC ROLES
       const member = await interaction.guild.members.fetch(player.id).catch(() => null);
 
       if (member && TIER_ROLES[gamemode]) {
@@ -287,7 +290,7 @@ client.on('interactionCreate', async interaction => {
         }
       }
 
-      // 4. EMBED RESULTS
+      // 3. EMBED RESULTS
       const embed = new EmbedBuilder()
         .setColor(0xFF0000)
         .setAuthor({ 
@@ -306,7 +309,7 @@ client.on('interactionCreate', async interaction => {
 
       const resultMessage = await targetChannel.send({ content: `<@${player.id}>`, embeds: [embed] });
 
-      // 5. AUTOMATIC REACTION
+      // 4. AUTOMATIC REACTION
       const emojis = ['🎉', '💀', '😱', '🔥', '🏆'];
       const delay = ms => new Promise(res => setTimeout(res, ms));
 
@@ -315,10 +318,9 @@ client.on('interactionCreate', async interaction => {
         await delay(250);
       }
 
-      // 6. RESPONSE BALASAN
-      await interaction.reply({
-        content: `✅ Test result for **${username}** has been sent to <#${OUTPUT_CHANNEL_ID}> and saved to Database!`,
-        flags: MessageFlags.Ephemeral
+      // 5. RESPONSE BALASAN PERBAIKAN
+      await interaction.editReply({
+        content: `✅ Test result for **${username}** has been sent to <#${OUTPUT_CHANNEL_ID}> and saved to Database!`
       });
 
       setTimeout(async () => {
@@ -327,9 +329,8 @@ client.on('interactionCreate', async interaction => {
 
     } catch (err) {
       console.error('❌ Error executing command:', err);
-      await interaction.reply({
-        content: `❌ Error: ${err.message || 'Failed to process test result'}`,
-        flags: MessageFlags.Ephemeral
+      await interaction.editReply({
+        content: `❌ Error: ${err.message || 'Failed to process test result'}`
       });
     }
   }
