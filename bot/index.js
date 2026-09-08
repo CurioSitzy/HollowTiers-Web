@@ -183,16 +183,20 @@ client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === 'testresult') {
-    // Cek Channel Komando
-    if (interaction.channelId !== COMMAND_CHANNEL_ID) {
-      return await interaction.reply({
-        content: `❌ This command can only be used in <#${COMMAND_CHANNEL_ID}>!`,
-        flags: MessageFlags.Ephemeral
-      });
+    // 1. PANGGIL DEFERREPLY LANGSUNG DI AWAL
+    try {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    } catch (err) {
+      console.error('❌ Failed to defer reply:', err);
+      return;
     }
 
-    // Tunda balasan agar Discord tidak timeout saat memproses Supabase
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    // 2. CEK CHANNEL KOMANDO
+    if (interaction.channelId !== COMMAND_CHANNEL_ID) {
+      return await interaction.editReply({
+        content: `❌ This command can only be used in <#${COMMAND_CHANNEL_ID}>!`
+      });
+    }
 
     const player = interaction.options.getUser('player');
     const tester = interaction.options.getUser('tester');
@@ -211,7 +215,7 @@ client.on('interactionCreate', async interaction => {
     }
 
     try {
-      // 1. SUPABASE LOGIC
+      // 3. SUPABASE LOGIC
       const { data: existingPlayers, error: fetchError } = await supabase
         .from('players')
         .select('*')
@@ -222,7 +226,6 @@ client.on('interactionCreate', async interaction => {
       let playerDb = existingPlayers && existingPlayers.length > 0 ? existingPlayers[0] : null;
 
       if (!playerDb) {
-        // PERBAIKAN: Menambahkan field 'type' agar tidak melanggar Not-Null Constraint Supabase
         const { data: newPlayer, error: createError } = await supabase
           .from('players')
           .insert([{ ign: username, points: 0, region: region, type: 'Java' }])
@@ -238,13 +241,15 @@ client.on('interactionCreate', async interaction => {
           .eq('id', playerDb.id);
       }
 
-      // Upsert Tier
+      // Format gamemode ID agar sesuai kriteria tabel
+      const gamemodeIdFormatted = gamemode.toLowerCase().replace(/\s+/g, '-');
+
       const { error: tierError } = await supabase
         .from('player_tiers')
         .upsert(
           {
             player_id: playerDb.id,
-            gamemode_id: gamemode.toLowerCase(),
+            gamemode_id: gamemodeIdFormatted,
             tier: rankEarned,
             tester_id: tester.id
           },
@@ -271,7 +276,7 @@ client.on('interactionCreate', async interaction => {
         .update({ points: totalPoints })
         .eq('id', playerDb.id);
 
-      // 2. AUTOMATIC ROLES
+      // 4. AUTOMATIC ROLES
       const member = await interaction.guild.members.fetch(player.id).catch(() => null);
 
       if (member && TIER_ROLES[gamemode]) {
@@ -290,7 +295,7 @@ client.on('interactionCreate', async interaction => {
         }
       }
 
-      // 3. EMBED RESULTS
+      // 5. EMBED RESULTS
       const embed = new EmbedBuilder()
         .setColor(0xFF0000)
         .setAuthor({ 
@@ -309,7 +314,7 @@ client.on('interactionCreate', async interaction => {
 
       const resultMessage = await targetChannel.send({ content: `<@${player.id}>`, embeds: [embed] });
 
-      // 4. AUTOMATIC REACTION
+      // 6. AUTOMATIC REACTION
       const emojis = ['🎉', '💀', '😱', '🔥', '🏆'];
       const delay = ms => new Promise(res => setTimeout(res, ms));
 
@@ -318,7 +323,7 @@ client.on('interactionCreate', async interaction => {
         await delay(250);
       }
 
-      // 5. RESPONSE BALASAN PERBAIKAN
+      // 7. BALASAN AKHIR
       await interaction.editReply({
         content: `✅ Test result for **${username}** has been sent to <#${OUTPUT_CHANNEL_ID}> and saved to Database!`
       });
