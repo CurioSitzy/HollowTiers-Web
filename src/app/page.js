@@ -116,7 +116,7 @@ function PlayerModal({ player, gamemodes, onClose }) {
 
 // Menambahkan Vanilla secara terpisah dari Overall
 const GAMEMODES_LIST = [
-  { id: 'overall', name: 'Overall', icon: '🏆' },
+  { id: 'overall', name: 'Overall', icon: '/icon/overall.png' }, // Menggunakan gambar PNG
   { id: 'vanilla', name: 'Vanilla', icon: '/icon/vanilla.png' },
   { id: 'sword', name: 'Sword', icon: '/icon/sword.png' },
   { id: 'axe', name: 'Axe', icon: '/icon/axe.png' },
