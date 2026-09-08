@@ -14,9 +14,11 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 
-const COMMAND_CHANNEL_ID = '1509184085015269516';
-const OUTPUT_CHANNEL_ID = '1500797205382959164';
+// ID Channel
+const COMMAND_CHANNEL_ID = '1509184085015269516'; // #result-commands
+const OUTPUT_CHANNEL_ID = '1500797205382959164';  // #🏆・results
 
+// Poin yang didapatkan player berdasarkan Tier
 const TIER_POINTS = {
   'HT1': 100, 'LT1': 80,
   'HT2': 60,  'LT2': 50,
@@ -25,6 +27,7 @@ const TIER_POINTS = {
   'HT5': 10,  'LT5': 5,
 };
 
+// Daftar pilihan Rank
 const RANK_CHOICES = [
   { name: 'N/A', value: 'N/A' },
   { name: 'LT5', value: 'LT5' },
@@ -39,6 +42,7 @@ const RANK_CHOICES = [
   { name: 'HT1', value: 'HT1' },
 ];
 
+// Mapping Role ID per Gamemode & Tier
 const TIER_ROLES = {
   'Crystal': {
     HT1: '1500746475448176793', LT1: '1500746484767789096',
@@ -179,7 +183,7 @@ client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === 'testresult') {
-    // 1. Defer Reply Secepat Mungkin
+    // 1. Defer Reply agar bot merespons "thinking..."
     try {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     } catch (err) {
@@ -187,7 +191,7 @@ client.on('interactionCreate', async interaction => {
       return;
     }
 
-    // 2. Validasi Channel
+    // 2. Cek Channel
     if (interaction.channelId !== COMMAND_CHANNEL_ID) {
       return await interaction.editReply({
         content: `❌ This command can only be used in <#${COMMAND_CHANNEL_ID}>!`
@@ -211,7 +215,7 @@ client.on('interactionCreate', async interaction => {
     }
 
     try {
-      // 3. Database Logic
+      // 3. DATABASE LOGIC (SUPABASE)
       const { data: existingPlayers, error: fetchError } = await supabase
         .from('players')
         .select('*')
@@ -237,7 +241,6 @@ client.on('interactionCreate', async interaction => {
           .eq('id', playerDb.id);
       }
 
-      // Format gamemode_id disesuaikan
       const gamemodeIdFormatted = gamemode.toLowerCase().replace(/\s+/g, '-');
 
       const { error: tierError } = await supabase
@@ -253,7 +256,7 @@ client.on('interactionCreate', async interaction => {
 
       if (tierError) throw tierError;
 
-      // Hitung total poin
+      // Hitung Ulang Poin
       const { data: allTiers } = await supabase
         .from('player_tiers')
         .select('tier')
@@ -271,7 +274,7 @@ client.on('interactionCreate', async interaction => {
         .update({ points: totalPoints })
         .eq('id', playerDb.id);
 
-      // 4. Role Update Logic
+      // 4. ROLES MANAGEMENT
       const member = await interaction.guild.members.fetch(player.id).catch(() => null);
 
       if (member && TIER_ROLES[gamemode]) {
@@ -290,7 +293,7 @@ client.on('interactionCreate', async interaction => {
         }
       }
 
-      // 5. Embed Output
+      // 5. EMBED DI CHANNEL OUTPUT (#results)
       const embed = new EmbedBuilder()
         .setColor(0xFF0000)
         .setAuthor({ 
@@ -309,7 +312,7 @@ client.on('interactionCreate', async interaction => {
 
       const resultMessage = await targetChannel.send({ content: `<@${player.id}>`, embeds: [embed] });
 
-      // 6. Safe Reactions (Aman dari unhandled rejection)
+      // 6. AUTO REACTION
       const emojis = ['🎉', '💀', '😱', '🔥', '🏆'];
       (async () => {
         for (const emoji of emojis) {
@@ -318,14 +321,10 @@ client.on('interactionCreate', async interaction => {
         }
       })();
 
-      // 7. Balasan Sukses
+      // 7. EDIT INITIAL REPLY (Mengubah pesan "thinking..." jadi pesan sukses tanpa pesan baru)
       await interaction.editReply({
         content: `✅ Test result for **${username}** has been sent to <#${OUTPUT_CHANNEL_ID}> and saved to Database!`
       }).catch(console.error);
-
-      setTimeout(async () => {
-        await interaction.deleteReply().catch(() => null);
-      }, 2000);
 
     } catch (err) {
       console.error('❌ Error executing command:', err);
