@@ -33,6 +33,52 @@ function RegionBadge({ region }) {
   );
 }
 
+// Komponen Badge Tier Berwarna (HT1 - LT5)
+function TierBadge({ tier }) {
+  if (!tier) return <span className="text-zinc-600 font-bold">-</span>;
+
+  const getTierStyle = (t) => {
+    const formattedTier = t.toUpperCase().trim();
+
+    switch (formattedTier) {
+      case 'HT1':
+        return 'bg-gradient-to-r from-amber-500 to-yellow-300 text-black font-black border-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.5)]';
+      case 'LT1':
+        return 'bg-amber-950/90 text-amber-300 border-amber-600/80 font-extrabold';
+      case 'HT2':
+        return 'bg-purple-900/90 text-purple-200 border-purple-500 font-extrabold shadow-[0_0_8px_rgba(168,85,247,0.4)]';
+      case 'LT2':
+        return 'bg-purple-950/80 text-purple-300 border-purple-800/70 font-bold';
+      case 'HT3':
+        return 'bg-red-900/90 text-red-200 border-red-500 font-bold';
+      case 'LT3':
+        return 'bg-red-950/80 text-red-300 border-red-800/70 font-bold';
+      case 'HT4':
+      case 'TIER 4':
+        return 'bg-blue-900/80 text-blue-200 border-blue-500 font-semibold';
+      case 'LT4':
+        return 'bg-blue-950/80 text-blue-300 border-blue-800/70 font-semibold';
+      case 'HT5':
+      case 'TIER 5':
+        return 'bg-emerald-950/80 text-emerald-300 border-emerald-800/70 font-medium';
+      case 'LT5':
+        return 'bg-zinc-800 text-zinc-300 border-zinc-700 font-medium';
+      default:
+        return 'bg-zinc-800 text-zinc-400 border-zinc-700';
+    }
+  };
+
+  return (
+    <span
+      className={`px-1.5 py-0.5 rounded text-[10px] border tracking-wide uppercase transition-all ${getTierStyle(
+        tier
+      )}`}
+    >
+      {tier}
+    </span>
+  );
+}
+
 // Modal Pop-up Player Card
 function PlayerModal({ player, gamemodes, onClose }) {
   if (!player) return null;
@@ -74,7 +120,7 @@ function PlayerModal({ player, gamemodes, onClose }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-2.5 mb-6">
+        <div className="grid grid-cols-4 gap-2.5 mb-6 max-h-60 overflow-y-auto pr-1">
           {gamemodes
             .filter((gm) => gm.id !== 'overall')
             .map((gm) => {
@@ -88,16 +134,10 @@ function PlayerModal({ player, gamemodes, onClose }) {
                   <div className="w-8 h-8 rounded-lg bg-zinc-900 flex items-center justify-center mb-1 border border-zinc-800/50">
                     <img src={gm.icon} alt={gm.name} className="w-5 h-5 object-contain" />
                   </div>
-                  <span className="text-[10px] font-extrabold uppercase text-zinc-400 tracking-wider">
+                  <span className="text-[10px] font-extrabold uppercase text-zinc-400 tracking-wider mb-1">
                     {gm.name}
                   </span>
-                  <span
-                    className={`text-xs font-black mt-0.5 ${
-                      tier ? 'text-white' : 'text-zinc-600'
-                    }`}
-                  >
-                    {tier || '—'}
-                  </span>
+                  <TierBadge tier={tier} />
                 </div>
               );
             })}
@@ -114,9 +154,9 @@ function PlayerModal({ player, gamemodes, onClose }) {
   );
 }
 
-// Menambahkan Vanilla secara terpisah dari Overall
+// Mengganti icon Overall menjadi custom image PNG
 const GAMEMODES_LIST = [
-  { id: 'overall', name: 'Overall', icon: '/icon/overall.png' }, // Menggunakan gambar PNG
+  { id: 'overall', name: 'Overall', icon: '/icon/overall.png' }, // Path ke custom icon kamu
   { id: 'vanilla', name: 'Vanilla', icon: '/icon/vanilla.png' },
   { id: 'sword', name: 'Sword', icon: '/icon/sword.png' },
   { id: 'axe', name: 'Axe', icon: '/icon/axe.png' },
@@ -124,6 +164,7 @@ const GAMEMODES_LIST = [
   { id: 'diapot', name: 'Diapot', icon: '/icon/pot.png' },
   { id: 'nethpot', name: 'NethPot', icon: '/icon/nethop.png' },
   { id: 'smp', name: 'SMP', icon: '/icon/smp.png' },
+  { id: 'diasmp', name: 'Dia SMP', icon: '/icon/smp.png' },
   { id: 'cart', name: 'Cart', icon: '/icon/cart.png' },
   { id: 'spear', name: 'Spear', icon: '/icon/spear.png' },
   { id: 'uhc', name: 'UHC', icon: '/icon/uhc.png' },
@@ -288,28 +329,23 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Dynamic Grid Layout untuk Menampung 11 Tab */}
-        <div className="grid grid-cols-3 sm:grid-cols-6 md:grid-cols-11 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-6 md:grid-cols-12 gap-2">
           {GAMEMODES_LIST.map((gm) => (
             <button
               key={gm.id}
               onClick={() => setActiveTab(gm.id)}
-              className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all ${
+              className={`flex flex-col items-center justify-center p-2.5 rounded-2xl border transition-all ${
                 activeTab === gm.id
                   ? 'bg-zinc-900 border-red-600/80 text-white shadow-lg shadow-red-950/50 scale-105'
                   : 'bg-zinc-900/40 border-zinc-800/60 text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200'
               }`}
             >
-              {gm.icon.startsWith('/') ? (
-                <img
-                  src={gm.icon}
-                  alt={gm.name}
-                  className="w-6 h-6 mb-1 object-contain drop-shadow"
-                />
-              ) : (
-                <span className="text-lg mb-1">{gm.icon}</span>
-              )}
-              <span className="text-xs font-bold">{gm.name}</span>
+              <img
+                src={gm.icon}
+                alt={gm.name}
+                className="w-5 h-5 mb-1 object-contain drop-shadow"
+              />
+              <span className="text-[11px] font-bold whitespace-nowrap">{gm.name}</span>
             </button>
           ))}
         </div>
@@ -366,9 +402,20 @@ export default function Home() {
                         <RegionBadge region={player.region} />
                       </div>
                       <p className="text-xs text-zinc-400 mt-0.5">
-                        {activeTab === 'overall'
-                          ? `${player.points || 0} points`
-                          : `Tier: ${player.tiers[activeTab === 'vanilla' ? 'crystal' : activeTab]}`}
+                        {activeTab === 'overall' ? (
+                          `${player.points || 0} points`
+                        ) : (
+                          <span className="flex items-center gap-1 mt-1">
+                            Tier:{' '}
+                            <TierBadge
+                              tier={
+                                player.tiers[
+                                  activeTab === 'vanilla' ? 'crystal' : activeTab
+                                ]
+                              }
+                            />
+                          </span>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -381,7 +428,7 @@ export default function Home() {
                       return (
                         <div
                           key={gm.id}
-                          className={`flex flex-col items-center min-w-[36px] p-1 rounded-lg ${
+                          className={`flex flex-col items-center min-w-[38px] p-1 rounded-lg ${
                             isCurrentTab
                               ? 'bg-red-950/60 border border-red-800/60'
                               : ''
@@ -394,13 +441,7 @@ export default function Home() {
                               isCurrentTab ? 'opacity-100 scale-110' : 'opacity-70'
                             }`}
                           />
-                          <span
-                            className={`text-[10px] font-black ${
-                              tier ? 'text-purple-400' : 'text-zinc-600'
-                            }`}
-                          >
-                            {tier || '-'}
-                          </span>
+                          <TierBadge tier={tier} />
                         </div>
                       );
                     })}
