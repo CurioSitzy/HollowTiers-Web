@@ -1,416 +1,108 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useState, useEffect } from 'react';
+import { createClient } from '@supabase/supabase-js';
 
-// Komponen Badge Region
-function RegionBadge({ region }) {
-  const getRegionColor = (reg) => {
-    switch (reg?.toUpperCase()) {
-      case 'NA':
-        return 'bg-red-950/80 text-red-400 border-red-800/50';
-      case 'EU':
-        return 'bg-blue-950/80 text-blue-400 border-blue-800/50';
-      case 'AS':
-        return 'bg-yellow-950/80 text-yellow-400 border-yellow-800/50';
-      case 'AU':
-        return 'bg-green-950/80 text-green-400 border-green-800/50';
-      case 'SA':
-        return 'bg-purple-950/80 text-purple-400 border-purple-800/50';
-      default:
-        return 'bg-zinc-800 text-zinc-400 border-zinc-700';
-    }
-  };
+// Inisialisasi Supabase Client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
 
-  return (
-    <span
-      className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[11px] font-black border tracking-wider ${getRegionColor(
-        region
-      )}`}
-    >
-      {region ? region.toUpperCase() : 'N/A'}
-    </span>
-  );
-}
-
-// Modal Pop-up Player Card (Persis Gambar UI)
-function PlayerModal({ player, gamemodes, onClose }) {
-  if (!player) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn">
-      <div className="relative w-full max-w-md bg-zinc-950 border border-zinc-800/90 rounded-3xl p-6 shadow-2xl text-white">
-        {/* Close Button Top Right */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-full w-8 h-8 flex items-center justify-center transition"
-        >
-          ✕
-        </button>
-
-        {/* Player Avatar Header */}
-        <div className="flex flex-col items-center text-center mt-2">
-          <div className="relative w-20 h-20 rounded-2xl p-1 bg-gradient-to-b from-red-600 to-red-950 shadow-[0_0_25px_rgba(220,38,38,0.4)] mb-3">
-            <img
-              src={`https://mc-heads.net/avatar/${player.ign}/80`}
-              alt={player.ign}
-              className="w-full h-full rounded-xl bg-zinc-900 object-cover"
-            />
-          </div>
-          <h2 className="text-2xl font-black tracking-tight">{player.ign}</h2>
-          <p className="text-xs text-zinc-400 font-medium">HollowTiers Ranked Player</p>
-        </div>
-
-        {/* Overall Rating Box */}
-        <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4 my-5 flex items-center justify-between">
-          <div>
-            <h4 className="text-[11px] font-extrabold text-zinc-400 uppercase tracking-wider">
-              OVERALL RATING
-            </h4>
-            <p className="text-xs text-zinc-500 font-medium">Across all gamemodes</p>
-          </div>
-          <div className="text-right">
-            <span className="text-2xl font-black block leading-none">Unranked</span>
-            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-              {player.points || 0} POINTS
-            </span>
-          </div>
-        </div>
-
-        {/* Gamemodes Grid Tiers */}
-        <div className="grid grid-cols-4 gap-2.5 mb-6">
-          {gamemodes
-            .filter((gm) => gm.id !== 'overall')
-            .map((gm) => {
-              const tier = player.tiers?.[gm.id];
-              return (
-                <div
-                  key={gm.id}
-                  className="bg-zinc-900/40 border border-zinc-800/80 rounded-xl p-2.5 flex flex-col items-center justify-center text-center"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-zinc-900 flex items-center justify-center mb-1 border border-zinc-800/50">
-                    <img src={gm.icon} alt={gm.name} className="w-5 h-5 object-contain" />
-                  </div>
-                  <span className="text-[10px] font-extrabold uppercase text-zinc-400 tracking-wider">
-                    {gm.name}
-                  </span>
-                  <span
-                    className={`text-xs font-black mt-0.5 ${
-                      tier ? 'text-white' : 'text-zinc-600'
-                    }`}
-                  >
-                    {tier || '—'}
-                  </span>
-                </div>
-              );
-            })}
-        </div>
-
-        {/* Red Close Button */}
-        <button
-          onClick={onClose}
-          className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-2xl transition duration-200 shadow-lg shadow-red-950/50 text-sm"
-        >
-          Close
-        </button>
-      </div>
-    </div>
-  );
-}
-
-const GAMEMODES_LIST = [
-  { id: 'overall', name: 'Overall', icon: '/icon/vanilla.png' },
-  { id: 'sword', name: 'Sword', icon: '/icon/sword.png' },
-  { id: 'axe', name: 'Axe', icon: '/icon/axe.png' },
-  { id: 'mace', name: 'Mace', icon: '/icon/mace.png' },
-  { id: 'diapot', name: 'Diapot', icon: '/icon/pot.png' },
-  { id: 'nethpot', name: 'NethPot', icon: '/icon/nethop.png' },
-  { id: 'smp', name: 'SMP', icon: '/icon/smp.png' },
-  { id: 'cart', name: 'Cart', icon: '/icon/cart.png' },
-  { id: 'spear', name: 'Spear', icon: '/icon/spear.png' },
-  { id: 'uhc', name: 'UHC', icon: '/icon/uhc.png' },
-];
-
-const TIER_RANKING = [
-  'HT1', 'LT1', 
-  'HT2', 'LT2', 
-  'HT3', 'LT3', 
-  'HT4', 'LT4', 
-  'HT5', 'LT5', 
-  'Tier 4', 'Tier 5'
-];
-
-export default function Home() {
-  const [activeTab, setActiveTab] = useState('overall');
+export default function LeaderboardPage() {
   const [players, setPlayers] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [loading, setLoading] = useState(true);
 
+  // 1. Fetch Data Pemain dari Supabase
   useEffect(() => {
-    async function fetchData() {
+    async function fetchPlayers() {
       setLoading(true);
-
-      const { data: playersData } = await supabase
+      const { data, error } = await supabase
         .from('players')
         .select('*')
-        .order('points', { ascending: false });
+        .order('points', { ascending: false }); // Urutkan berdasarkan poin tertinggi
 
-      const { data: tiersData } = await supabase
-        .from('player_tiers')
-        .select('player_id, gamemode_id, tier');
-
-      if (playersData) {
-        const formatted = playersData.map((player) => {
-          const playerTiersMap = {};
-          if (tiersData) {
-            tiersData
-              .filter((t) => t.player_id === player.id)
-              .forEach((t) => {
-                playerTiersMap[t.gamemode_id] = t.tier;
-              });
-          }
-          return {
-            ...player,
-            tiers: playerTiersMap,
-          };
-        });
-
-        setPlayers(formatted);
+      if (error) {
+        console.error('Error fetching players:', error);
+      } else {
+        setPlayers(data || []);
       }
       setLoading(false);
     }
 
-    fetchData();
+    fetchPlayers();
   }, []);
 
-  // Filter & Search Logic
-  const getFilteredPlayers = () => {
-    let result = players;
+  // 2. LOGIKA RANK ASLI + FILTER SEARCH
+  // Pertama: Tambahkan 'originalRank' (index + 1) berdasarkan posisi asli di leaderboard
+  const rankedPlayers = players.map((player, index) => ({
+    ...player,
+    originalRank: index + 1
+  }));
 
-    // Filter berdasarkan search input
-    if (searchQuery.trim() !== '') {
-      result = result.filter((p) =>
-        p.ign.toLowerCase().includes(searchQuery.toLowerCase().trim())
-      );
-    }
-
-    if (activeTab === 'overall') {
-      return result;
-    }
-
-    const filtered = result.filter((player) => player.tiers?.[activeTab]);
-
-    return filtered.sort((a, b) => {
-      const tierA = a.tiers[activeTab];
-      const tierB = b.tiers[activeTab];
-
-      const indexA = TIER_RANKING.indexOf(tierA);
-      const indexB = TIER_RANKING.indexOf(tierB);
-
-      const rankA = indexA !== -1 ? indexA : 999;
-      const rankB = indexB !== -1 ? indexB : 999;
-
-      return rankA - rankB;
-    });
-  };
-
-  // Handler saat menekan Enter di search bar
-  const handleSearchKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      const filtered = getFilteredPlayers();
-      if (filtered.length > 0) {
-        // Otomatis buka modal player pertama yang cocok
-        setSelectedPlayer(filtered[0]);
-      }
-    }
-  };
-
-  const filteredPlayers = getFilteredPlayers();
-
-  const getRankBadge = (index) => {
-    if (index === 0) return <span className="text-3xl animate-bounce">👑</span>;
-    if (index === 1) return <span className="text-2xl">🥈</span>;
-    if (index === 2) return <span className="text-2xl">🥉</span>;
-    return <span className="font-extrabold text-zinc-500 text-lg">{index + 1}.</span>;
-  };
-
-  const getTop3Style = (index) => {
-    if (index === 0) {
-      return 'bg-gradient-to-r from-amber-950/60 via-zinc-900 to-amber-950/30 border-amber-500/80 shadow-[0_0_20px_rgba(245,158,11,0.2)] hover:border-amber-400 scale-[1.01]';
-    }
-    if (index === 1) {
-      return 'bg-gradient-to-r from-slate-900 via-zinc-900 to-slate-900/50 border-slate-400/70 shadow-[0_0_15px_rgba(148,163,184,0.15)] hover:border-slate-300';
-    }
-    if (index === 2) {
-      return 'bg-gradient-to-r from-orange-950/40 via-zinc-900 to-orange-950/20 border-amber-700/70 shadow-[0_0_15px_rgba(180,83,9,0.15)] hover:border-amber-600';
-    }
-    return 'bg-zinc-900/80 border-zinc-800/80 hover:border-zinc-700';
-  };
+  // Kedua: Filter berdasarkan pencarian nama (IGN)
+  const filteredPlayers = rankedPlayers.filter((player) =>
+    player.ign.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white p-4 md:p-8 font-sans">
-      {/* Modal Player Pop-up */}
-      <PlayerModal
-        player={selectedPlayer}
-        gamemodes={GAMEMODES_LIST}
-        onClose={() => setSelectedPlayer(null)}
-      />
+    <main className="min-h-screen bg-slate-900 text-white p-8">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-3xl font-bold mb-6 text-center">🏆 HollowTiers Leaderboard</h1>
 
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Top Navbar */}
-        <header className="flex flex-wrap items-center justify-between gap-4 bg-zinc-900/60 p-4 rounded-2xl border border-zinc-800/80 backdrop-blur">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-black tracking-wider text-red-500 uppercase">
-              Hollow<span className="text-white">Tiers</span>
-            </h1>
-          </div>
-
-          <nav className="flex items-center gap-6 text-sm font-bold text-zinc-400">
-            <a href="#" className="text-white hover:text-red-400">🏠 Home</a>
-            <a href="#" className="hover:text-white">☑️ Ranking</a>
-            <a href="#" className="hover:text-white">👑 Hall Of Fame</a>
-            <a href="#" className="hover:text-white">💬 Discord</a>
-          </nav>
-
-          {/* Search Bar dengan fitur Enter */}
-          <div className="flex items-center gap-3">
-            <input
-              type="text"
-              placeholder="Search Player..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={handleSearchKeyDown}
-              className="bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2 text-sm text-zinc-200 focus:outline-none focus:border-red-500 w-48 transition"
-            />
-          </div>
-        </header>
-
-        {/* Gamemodes Selector Tabs */}
-        <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-10 gap-2">
-          {GAMEMODES_LIST.map((gm) => (
-            <button
-              key={gm.id}
-              onClick={() => setActiveTab(gm.id)}
-              className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all ${
-                activeTab === gm.id
-                  ? 'bg-zinc-900 border-red-600/80 text-white shadow-lg shadow-red-950/50 scale-105'
-                  : 'bg-zinc-900/40 border-zinc-800/60 text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200'
-              }`}
-            >
-              <img
-                src={gm.icon}
-                alt={gm.name}
-                className="w-6 h-6 mb-1 object-contain drop-shadow"
-              />
-              <span className="text-xs font-bold">{gm.name}</span>
-            </button>
-          ))}
+        {/* Search Bar Input */}
+        <div className="mb-6">
+          <input
+            type="text"
+            placeholder="Cari IGN player..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full p-3 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-red-500 transition-all"
+          />
         </div>
 
-        {/* Leaderboard Table */}
-        <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-4 md:p-6">
-          {/* Table Header */}
-          <div className="flex items-center justify-between text-xs font-black tracking-wider text-red-500 uppercase pb-4 px-4 border-b border-zinc-800/80 mb-4">
-            <div className="flex items-center gap-6">
-              <span className="w-8">#</span>
-              <span>PLAYER</span>
-            </div>
-            <span>
-              {activeTab === 'overall'
-                ? 'TIERS'
-                : `${activeTab.toUpperCase()} TIER`}
-            </span>
-          </div>
-
-          {/* Player Rows */}
-          {loading ? (
-            <div className="text-center text-zinc-500 py-12">Loading rankings...</div>
-          ) : filteredPlayers.length > 0 ? (
-            <div className="flex flex-col gap-3">
-              {filteredPlayers.map((player, index) => (
-                <div
-                  key={player.id}
-                  onClick={() => setSelectedPlayer(player)}
-                  className={`flex flex-col sm:flex-row sm:items-center justify-between border p-4 rounded-2xl transition gap-4 relative overflow-hidden cursor-pointer ${getTop3Style(
-                    index
-                  )}`}
-                >
-                  {index === 0 && (
-                    <div className="absolute top-0 right-0 bg-amber-500 text-black text-[9px] font-black px-3 py-0.5 rounded-bl-lg uppercase tracking-wider shadow">
-                      #1 Champion
-                    </div>
-                  )}
-
-                  {/* Left: Rank, Avatar, IGN, Region, Points */}
-                  <div className="flex items-center gap-4">
-                    <div className="w-8 flex justify-center">{getRankBadge(index)}</div>
-                    <img
-                      src={`https://mc-heads.net/avatar/${player.ign}/40`}
-                      alt={player.ign}
-                      className={`w-10 h-10 rounded-xl bg-zinc-800 ${
-                        index === 0 ? 'ring-2 ring-amber-400/80' : ''
-                      }`}
-                    />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3
-                          className={`font-bold text-base ${
-                            index === 0 ? 'text-amber-300' : 'text-white'
-                          }`}
-                        >
-                          {player.ign}
-                        </h3>
-                        <RegionBadge region={player.region} />
-                      </div>
-                      <p className="text-xs text-zinc-400 mt-0.5">
-                        {activeTab === 'overall'
-                          ? `${player.points || 0} points`
-                          : `Tier: ${player.tiers[activeTab]}`}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Right: Tiers Breakdown Per Gamemode */}
-                  <div className="flex items-center gap-3 overflow-x-auto py-1">
-                    {GAMEMODES_LIST.filter((gm) => gm.id !== 'overall').map((gm) => {
-                      const tier = player.tiers?.[gm.id];
-                      const isCurrentTab = gm.id === activeTab;
-                      return (
-                        <div
-                          key={gm.id}
-                          className={`flex flex-col items-center min-w-[36px] p-1 rounded-lg ${
-                            isCurrentTab
-                              ? 'bg-red-950/60 border border-red-800/60'
-                              : ''
-                          }`}
-                        >
-                          <img
-                            src={gm.icon}
-                            alt={gm.name}
-                            className={`w-5 h-5 mb-1 object-contain ${
-                              isCurrentTab ? 'opacity-100 scale-110' : 'opacity-70'
-                            }`}
-                          />
-                          <span
-                            className={`text-[10px] font-black ${
-                              tier ? 'text-purple-400' : 'text-zinc-600'
-                            }`}
-                          >
-                            {tier || '-'}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center text-zinc-500 py-12 italic">
-              No players found in this category.
-            </div>
-          )}
+        {/* Tabel Leaderboard */}
+        <div className="overflow-x-auto rounded-lg border border-slate-800">
+          <table className="w-full text-left bg-slate-800">
+            <thead className="bg-slate-700 text-slate-300">
+              <tr>
+                <th className="p-4">Rank</th>
+                <th className="p-4">IGN</th>
+                <th className="p-4">Region</th>
+                <th className="p-4 text-right">Points</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-700">
+              {loading ? (
+                <tr>
+                  <td colSpan="4" className="p-4 text-center text-slate-400">
+                    Loading leaderboard data...
+                  </td>
+                </tr>
+              ) : filteredPlayers.length > 0 ? (
+                filteredPlayers.map((player) => (
+                  <tr key={player.id} className="hover:bg-slate-750">
+                    {/* Menggunakan originalRank agar nomor rank tidak berubah jadi #1 saat dicari */}
+                    <td className="p-4 font-bold text-red-400">
+                      #{player.originalRank}
+                    </td>
+                    <td className="p-4 font-medium">{player.ign}</td>
+                    <td className="p-4">{player.region || 'N/A'}</td>
+                    <td className="p-4 text-right font-bold text-yellow-400">
+                      {player.points} pts
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="4" className="p-4 text-center text-slate-400">
+                    Pemain tidak ditemukan.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </main>
