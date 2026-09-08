@@ -183,7 +183,7 @@ client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === 'testresult') {
-    // 1. PANGGIL DEFERREPLY LANGSUNG DI AWAL
+    // 1. Panggil deferReply paling awal agar tidak timeout
     try {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     } catch (err) {
@@ -191,7 +191,7 @@ client.on('interactionCreate', async interaction => {
       return;
     }
 
-    // 2. CEK CHANNEL KOMANDO
+    // 2. Cek channel komando
     if (interaction.channelId !== COMMAND_CHANNEL_ID) {
       return await interaction.editReply({
         content: `❌ This command can only be used in <#${COMMAND_CHANNEL_ID}>!`
@@ -215,7 +215,7 @@ client.on('interactionCreate', async interaction => {
     }
 
     try {
-      // 3. SUPABASE LOGIC
+      // 3. DATABASE LOGIC (SUPABASE)
       const { data: existingPlayers, error: fetchError } = await supabase
         .from('players')
         .select('*')
@@ -241,24 +241,24 @@ client.on('interactionCreate', async interaction => {
           .eq('id', playerDb.id);
       }
 
-      // Format gamemode ID agar sesuai kriteria tabel
+      // Format gamemode_id
       const gamemodeIdFormatted = gamemode.toLowerCase().replace(/\s+/g, '-');
 
+      // Upsert ke player_tiers (tester_id dihapus agar tidak melanggar schema Supabase)
       const { error: tierError } = await supabase
         .from('player_tiers')
         .upsert(
           {
             player_id: playerDb.id,
             gamemode_id: gamemodeIdFormatted,
-            tier: rankEarned,
-            tester_id: tester.id
+            tier: rankEarned
           },
           { onConflict: 'player_id, gamemode_id' }
         );
 
       if (tierError) throw tierError;
 
-      // Hitung Total Poin Terbaru
+      // Hitung ulang total poin
       const { data: allTiers } = await supabase
         .from('player_tiers')
         .select('tier')
@@ -323,7 +323,7 @@ client.on('interactionCreate', async interaction => {
         await delay(250);
       }
 
-      // 7. BALASAN AKHIR
+      // 7. RESPONS AKHIR KE DISCORD
       await interaction.editReply({
         content: `✅ Test result for **${username}** has been sent to <#${OUTPUT_CHANNEL_ID}> and saved to Database!`
       });
