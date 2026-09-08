@@ -42,9 +42,9 @@ const RANK_CHOICES = [
   { name: 'HT1', value: 'HT1' },
 ];
 
-// Mapping Custom Emoji Region (Ganti ID angka dengan ID Custom Emoji asli server kamu)
+// Mapping Custom Emoji Region
 const REGION_FLAGS = {
-  'NA': '<:NorthAmerica:1546889484635742351> NA', // Gunakan nama asli emoji (NorthAmerica)
+  'NA': '<:NorthAmerica:1546889484635742351> NA',
   'EU': '<:Europe:1546889606786580642> EU',
   'AS': '<:Asia:1546889654286950500> AS',
   'AU': '<:Ocenia:1546892233016606771> AU',
@@ -118,6 +118,9 @@ const TIER_ROLES = {
   }
 };
 
+// Vanilla menggunakan role mapping yang sama dengan Crystal
+TIER_ROLES['Vanilla'] = TIER_ROLES['Crystal'];
+
 client.once('ready', () => {
   console.log(`🤖 Bot HollowTiers Online as ${client.user.tag}`);
 });
@@ -185,12 +188,12 @@ client.on('interactionCreate', async interaction => {
           .eq('id', playerDb.id);
       }
 
-      // Format gamemode ID
+      // Format gamemode ID untuk database Supabase
       let gamemodeIdFormatted = gamemode.toLowerCase().trim();
       if (gamemodeIdFormatted === 'netherite op') gamemodeIdFormatted = 'nethpot';
       else if (gamemodeIdFormatted === 'pot') gamemodeIdFormatted = 'diapot';
       else if (gamemodeIdFormatted === 'spear mace') gamemodeIdFormatted = 'spear';
-      else if (gamemodeIdFormatted === 'vanilla') gamemodeIdFormatted = 'overall';
+      else if (gamemodeIdFormatted === 'vanilla') gamemodeIdFormatted = 'crystal'; // Vanilla dikirim sebagai crystal
 
       // Upsert Tier
       const { error: tierError } = await supabase
