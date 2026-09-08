@@ -1,10 +1,9 @@
 require('dotenv').config({ path: '.env.local' });
-require('dotenv').config(); // Fallback membaca variabel environment Railway/Root .env
+require('dotenv').config();
 
 const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } = require('discord.js');
 const { createClient } = require('@supabase/supabase-js');
 
-// Ambil variabel environment (Mendukung Railway & .env.local)
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -12,12 +11,9 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error('❌ Error: SUPABASE_URL atau SUPABASE_SERVICE_ROLE_KEY tidak terdeteksi!');
 }
 
-// Inisialisasi koneksi Supabase
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-// Poin yang didapatkan player berdasarkan Tier
 const TIER_POINTS = {
   'HT1': 100, 'LT1': 80,
   'HT2': 60,  'LT2': 50,
@@ -26,7 +22,6 @@ const TIER_POINTS = {
   'HT5': 10,  'LT5': 5,
 };
 
-// Pilihan Slash Command /testresults
 const commands = [
   new SlashCommandBuilder()
     .setName('testresults')
@@ -69,11 +64,32 @@ const commands = [
           { name: 'LT5', value: 'LT5' }
         )
     )
+    .addUserOption(option =>
+      option.setName('tester')
+        .setDescription('Tester who conducted the test')
+        .setRequired(false)
+    )
+    .addStringOption(option =>
+      option.setName('region')
+        .setDescription('Player region')
+        .setRequired(false)
+        .addChoices(
+          { name: 'NA', value: 'NA' },
+          { name: 'EU', value: 'EU' },
+          { name: 'AS', value: 'AS' },
+          { name: 'SA', value: 'SA' },
+          { name: 'OCE', value: 'OCE' }
+        )
+    )
+    .addStringOption(option =>
+      option.setName('proof')
+        .setDescription('Proof image / video link')
+        .setRequired(false)
+    )
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
-// Event ketika bot aktif
 client.once('ready', async () => {
   console.log(`🤖 Bot HollowTiers Online as ${client.user.tag}`);
   try {
@@ -87,7 +103,6 @@ client.once('ready', async () => {
   }
 });
 
-// Event ketika perintah /testresults diketik di Discord
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
@@ -97,37 +112,36 @@ client.on('interactionCreate', async interaction => {
     const ign = interaction.options.getString('ign');
     const gamemode = interaction.options.getString('gamemode');
     const tier = interaction.options.getString('tier');
+    const tester = interaction.options.getUser('tester');
+    const region = interaction.options.getString('region');
+    const proof = interaction.options.getString('proof');
 
     try {
-      // 1. Cek data player tanpa menggunakan .single() agar tidak throw error jika kosong
       const { data: existingPlayers, error: fetchError } = await supabase
         .from('players')
         .select('*')
         .eq('ign', ign);
 
-      if (fetchError) {
-        console.error('❌ Error fetching player:', fetchError);
-        throw fetchError;
-      }
+      if (fetchError) throw fetchError;
 
       let player = existingPlayers && existingPlayers.length > 0 ? existingPlayers[0] : null;
 
-      // Buat player baru jika belum ada
       if (!player) {
         const { data: newPlayer, error: createError } = await supabase
           .from('players')
-          .insert([{ ign: ign, points: 0 }])
+          .insert([{ ign: ign, points: 0, region: region || null }])
           .select()
           .single();
 
-        if (createError) {
-          console.error('❌ Error creating player:', createError);
-          throw createError;
-        }
+        if (createError) throw createError;
         player = newPlayer;
+      } else if (region) {
+        await supabase
+          .from('players')
+          .update({ region: region })
+          .eq('id', player.id);
       }
 
-      // 2. Simpan atau perbarui tier di tabel player_tiers
       const { error: tierError } = await supabase
         .from('player_tiers')
         .upsert(
@@ -135,24 +149,18 @@ client.on('interactionCreate', async interaction => {
             player_id: player.id,
             gamemode_id: gamemode,
             tier: tier,
+            tester_id: tester ? tester.id : null,
+            proof: proof || null
           },
           { onConflict: 'player_id, gamemode_id' }
         );
 
-      if (tierError) {
-        console.error('❌ Error upserting player tier:', tierError);
-        throw tierError;
-      }
+      if (tierError) throw tierError;
 
-      // 3. Hitung ulang total poin player dari seluruh gamemode
-      const { data: allTiers, error: allTiersError } = await supabase
+      const { data: allTiers } = await supabase
         .from('player_tiers')
         .select('tier')
         .eq('player_id', player.id);
-
-      if (allTiersError) {
-        console.error('❌ Error fetching all tiers:', allTiersError);
-      }
 
       let totalPoints = 0;
       if (allTiers) {
@@ -161,21 +169,17 @@ client.on('interactionCreate', async interaction => {
         });
       }
 
-      // Update total poin terbaru ke tabel players
-      const { error: updatePointsError } = await supabase
+      await supabase
         .from('players')
         .update({ points: totalPoints })
         .eq('id', player.id);
 
-      if (updatePointsError) {
-        console.error('❌ Error updating total points:', updatePointsError);
-      }
+      let responseMsg = `✅ Success! Updated **${ign}** -> **${tier}** in **${gamemode.toUpperCase()}** (Total Points: ${totalPoints})`;
+      if (tester) responseMsg += `\n**Tester:** <@${tester.id}>`;
+      if (region) responseMsg += `\n**Region:** ${region}`;
+      if (proof) responseMsg += `\n**Proof:** ${proof}`;
 
-      console.log(`✅ [Supabase Direct Log] Success update for ${ign}`);
-
-      await interaction.editReply(
-        `✅ Success! Updated **${ign}** -> **${tier}** in **${gamemode.toUpperCase()}** (Total Points: ${totalPoints})`
-      );
+      await interaction.editReply(responseMsg);
     } catch (err) {
       console.error('❌ System Catch Error:', err);
       await interaction.editReply(`❌ Error updating database: ${err.message || 'Unknown Error'}`);
