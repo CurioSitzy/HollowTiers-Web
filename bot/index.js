@@ -1,7 +1,7 @@
 require('dotenv').config({ path: '.env.local' });
 require('dotenv').config();
 
-const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, MessageFlags, PermissionFlagsBits } = require('discord.js');
 const { createClient } = require('@supabase/supabase-js');
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -18,7 +18,7 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 const COMMAND_CHANNEL_ID = '1509184085015269516'; // #result-commands
 const OUTPUT_CHANNEL_ID = '1500797205382959164';  // #🏆・results
 
-// Poin yang didapatkan player berdasarkan Tier
+// Poin berdasarkan Tier
 const TIER_POINTS = {
   'HT1': 100, 'LT1': 80,
   'HT2': 60,  'LT2': 50,
@@ -118,7 +118,9 @@ const TIER_ROLES = {
   }
 };
 
+// Pendaftaran Semua Command
 const commands = [
+  // 1. COMMAND TESTRESULT
   new SlashCommandBuilder()
     .setName('testresult')
     .setDescription('Send a player tier test result')
@@ -170,7 +172,13 @@ const commands = [
       option.setName('rank_earned')
         .setDescription('Rank earned')
         .setRequired(true)
-        .addChoices(...RANK_CHOICES.filter(choice => choice.value !== 'N/A')))
+        .addChoices(...RANK_CHOICES.filter(choice => choice.value !== 'N/A'))),
+
+  // 2. COMMAND SETUP (GABUNGAN)
+  new SlashCommandBuilder()
+    .setName('setup')
+    .setDescription('Setup configuration command for the server')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
@@ -182,7 +190,7 @@ client.once('ready', async () => {
       Routes.applicationCommands(client.user.id),
       { body: commands }
     );
-    console.log('✅ Slash command /testresult successfully registered!');
+    console.log('✅ Slash commands (/testresult & /setup) registered!');
   } catch (error) {
     console.error('❌ Failed to register slash commands:', error);
   }
@@ -191,8 +199,8 @@ client.once('ready', async () => {
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
+  // --- LOGIKA COMMAND: /testresult ---
   if (interaction.commandName === 'testresult') {
-    // 1. Defer Reply
     try {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     } catch (err) {
@@ -200,7 +208,6 @@ client.on('interactionCreate', async interaction => {
       return;
     }
 
-    // 2. Cek Channel
     if (interaction.channelId !== COMMAND_CHANNEL_ID) {
       return await interaction.editReply({
         content: `❌ This command can only be used in <#${COMMAND_CHANNEL_ID}>!`
@@ -219,13 +226,12 @@ client.on('interactionCreate', async interaction => {
 
     if (!targetChannel) {
       return await interaction.editReply({
-        content: `❌ Could not find output channel! Please check output channel ID.`
+        content: `❌ Could not find output channel!`
       }).catch(console.error);
     }
 
     try {
-      // 3. DATABASE LOGIC (SUPABASE)
-      // Menggunakan .ilike agar pencarian username bersifat Case-Insensitive
+      // 1. SUPABASE DATABASE LOGIC
       const { data: existingPlayers, error: fetchError } = await supabase
         .from('players')
         .select('*')
@@ -258,7 +264,7 @@ client.on('interactionCreate', async interaction => {
       else if (gamemodeIdFormatted === 'spear mace') gamemodeIdFormatted = 'spear';
       else if (gamemodeIdFormatted === 'vanilla') gamemodeIdFormatted = 'overall';
 
-      // Simpan/Update Tier Player
+      // Upsert Tier
       const { error: tierError } = await supabase
         .from('player_tiers')
         .upsert(
@@ -272,7 +278,7 @@ client.on('interactionCreate', async interaction => {
 
       if (tierError) throw tierError;
 
-      // Hitung Ulang Poin Player
+      // Hitung Ulang Total Poin
       const { data: allTiers } = await supabase
         .from('player_tiers')
         .select('tier')
@@ -290,7 +296,7 @@ client.on('interactionCreate', async interaction => {
         .update({ points: totalPoints })
         .eq('id', playerDb.id);
 
-      // 4. ROLES MANAGEMENT
+      // 2. DISCORD ROLES MANAGEMENT
       const member = await interaction.guild.members.fetch(player.id).catch(() => null);
 
       if (member && TIER_ROLES[gamemode]) {
@@ -309,7 +315,7 @@ client.on('interactionCreate', async interaction => {
         }
       }
 
-      // 5. EMBED DI CHANNEL OUTPUT (#results)
+      // 3. SEND EMBED TO OUTPUT CHANNEL
       const formattedRegion = REGION_FLAGS[region] || `\`${region}\``;
 
       const embed = new EmbedBuilder()
@@ -332,7 +338,7 @@ client.on('interactionCreate', async interaction => {
 
       const resultMessage = await targetChannel.send({ content: `<@${player.id}>`, embeds: [embed] });
 
-      // 6. AUTO REACTION
+      // 4. AUTO REACTION
       const emojis = ['🎉', '💀', '😱', '🔥', '🏆'];
       (async () => {
         for (const emoji of emojis) {
@@ -341,7 +347,6 @@ client.on('interactionCreate', async interaction => {
         }
       })();
 
-      // 7. EDIT INITIAL REPLY
       await interaction.editReply({
         content: `✅ Test result for **${username}** has been sent to <#${OUTPUT_CHANNEL_ID}> and saved to Database!`
       }).catch(console.error);
@@ -352,6 +357,14 @@ client.on('interactionCreate', async interaction => {
         content: `❌ Error: ${err.message || 'Failed to process test result'}`
       }).catch(console.error);
     }
+  }
+
+  // --- LOGIKA COMMAND: /setup ---
+  if (interaction.commandName === 'setup') {
+    await interaction.reply({
+      content: '⚙️ Setup command executed successfully!',
+      flags: MessageFlags.Ephemeral
+    });
   }
 });
 
