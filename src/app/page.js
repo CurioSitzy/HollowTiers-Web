@@ -164,7 +164,7 @@ const GAMEMODES_LIST = [
   { id: 'diapot', name: 'Diapot', icon: '/icon/pot.png' },
   { id: 'nethpot', name: 'NethPot', icon: '/icon/nethop.png' },
   { id: 'smp', name: 'SMP', icon: '/icon/smp.png' },
-  { id: 'diasmp', name: 'Dia SMP', icon: '/icon/smp.png' },
+  { id: 'diasmp', name: 'Dia SMP', icon: '/icon/Diasmp.png' },
   { id: 'cart', name: 'Cart', icon: '/icon/cart.png' },
   { id: 'spear', name: 'Spear', icon: '/icon/spear.png' },
   { id: 'uhc', name: 'UHC', icon: '/icon/uhc.png' },
