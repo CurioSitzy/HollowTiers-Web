@@ -192,7 +192,7 @@ client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === 'testresult') {
-    // 1. Defer Reply agar bot merespons "thinking..."
+    // 1. Defer Reply
     try {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     } catch (err) {
@@ -210,7 +210,7 @@ client.on('interactionCreate', async interaction => {
     const player = interaction.options.getUser('player');
     const tester = interaction.options.getUser('tester');
     const region = interaction.options.getString('region');
-    const username = interaction.options.getString('username');
+    const username = interaction.options.getString('username').trim();
     const gamemode = interaction.options.getString('gamemode');
     const previousRank = interaction.options.getString('previous_rank');
     const rankEarned = interaction.options.getString('rank_earned');
@@ -225,10 +225,11 @@ client.on('interactionCreate', async interaction => {
 
     try {
       // 3. DATABASE LOGIC (SUPABASE)
+      // Menggunakan .ilike agar pencarian username bersifat Case-Insensitive
       const { data: existingPlayers, error: fetchError } = await supabase
         .from('players')
         .select('*')
-        .eq('ign', username);
+        .ilike('ign', username);
 
       if (fetchError) throw fetchError;
 
@@ -246,16 +247,18 @@ client.on('interactionCreate', async interaction => {
       } else {
         await supabase
           .from('players')
-          .update({ region: region })
+          .update({ region: region, ign: username })
           .eq('id', playerDb.id);
       }
 
-      // Format slug gamemode agar cocok dengan frontend (misal: "Spear Mace" -> "spear-mace" / "nethpot")
-      let gamemodeIdFormatted = gamemode.toLowerCase().replace(/\s+/g, '-');
-      if (gamemodeIdFormatted === 'netherite-op') gamemodeIdFormatted = 'nethpot';
-      if (gamemodeIdFormatted === 'pot') gamemodeIdFormatted = 'diapot';
-      if (gamemodeIdFormatted === 'spear-mace') gamemodeIdFormatted = 'spear';
+      // Format gamemode ID agar sesuai persis dengan frontend website
+      let gamemodeIdFormatted = gamemode.toLowerCase().trim();
+      if (gamemodeIdFormatted === 'netherite op') gamemodeIdFormatted = 'nethpot';
+      else if (gamemodeIdFormatted === 'pot') gamemodeIdFormatted = 'diapot';
+      else if (gamemodeIdFormatted === 'spear mace') gamemodeIdFormatted = 'spear';
+      else if (gamemodeIdFormatted === 'vanilla') gamemodeIdFormatted = 'overall';
 
+      // Simpan/Update Tier Player
       const { error: tierError } = await supabase
         .from('player_tiers')
         .upsert(
@@ -269,7 +272,7 @@ client.on('interactionCreate', async interaction => {
 
       if (tierError) throw tierError;
 
-      // Hitung Ulang Poin
+      // Hitung Ulang Poin Player
       const { data: allTiers } = await supabase
         .from('player_tiers')
         .select('tier')
