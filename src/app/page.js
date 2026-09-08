@@ -1,189 +1,430 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+// Komponen Badge Region
+function RegionBadge({ region }) {
+  const getRegionColor = (reg) => {
+    switch (reg?.toUpperCase()) {
+      case 'NA':
+        return 'bg-red-950/80 text-red-400 border-red-800/50';
+      case 'EU':
+        return 'bg-blue-950/80 text-blue-400 border-blue-800/50';
+      case 'AS':
+        return 'bg-yellow-950/80 text-yellow-400 border-yellow-800/50';
+      case 'AU':
+        return 'bg-green-950/80 text-green-400 border-green-800/50';
+      case 'SA':
+        return 'bg-purple-950/80 text-purple-400 border-purple-800/50';
+      default:
+        return 'bg-zinc-800 text-zinc-400 border-zinc-700';
+    }
+  };
 
-// Daftar Tab Gamemode beserta Ikon/Emoji
-const GAMEMODES = [
-  { id: 'overall', name: 'Overall', icon: '🟣' },
-  { id: 'sword', name: 'Sword', icon: '⚔️' },
-  { id: 'axe', name: 'Axe', icon: '🪓' },
-  { id: 'mace', name: 'Mace', icon: '🔨' },
-  { id: 'diapot', name: 'Diapot', icon: '🧪' },
-  { id: 'nethpot', name: 'NethPot', icon: '🟣' },
-  { id: 'smp', name: 'SMP', icon: '🟢' },
-  { id: 'cart', name: 'Cart', icon: '🧨' },
-  { id: 'spear', name: 'Spear', icon: '🗡️' },
-  { id: 'uhc', name: 'UHC', icon: '❤️' },
+  return (
+    <span
+      className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[11px] font-black border tracking-wider ${getRegionColor(
+        region
+      )}`}
+    >
+      {region ? region.toUpperCase() : 'N/A'}
+    </span>
+  );
+}
+
+// Modal Pop-up Player Card
+function PlayerModal({ player, gamemodes, onClose }) {
+  if (!player) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn">
+      <div className="relative w-full max-w-md bg-zinc-950 border border-zinc-800/90 rounded-3xl p-6 shadow-2xl text-white">
+        {/* Close Button Top Right */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-full w-8 h-8 flex items-center justify-center transition"
+        >
+          ✕
+        </button>
+
+        {/* Player Avatar Header */}
+        <div className="flex flex-col items-center text-center mt-2">
+          <div className="relative w-20 h-20 rounded-2xl p-1 bg-gradient-to-b from-red-600 to-red-950 shadow-[0_0_25px_rgba(220,38,38,0.4)] mb-3">
+            <img
+              src={`https://mc-heads.net/avatar/${player.ign}/80`}
+              alt={player.ign}
+              className="w-full h-full rounded-xl bg-zinc-900 object-cover"
+            />
+          </div>
+          <h2 className="text-2xl font-black tracking-tight">{player.ign}</h2>
+          <p className="text-xs text-zinc-400 font-medium">HollowTiers Ranked Player</p>
+        </div>
+
+        {/* Overall Rating Box */}
+        <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4 my-5 flex items-center justify-between">
+          <div>
+            <h4 className="text-[11px] font-extrabold text-zinc-400 uppercase tracking-wider">
+              OVERALL RATING
+            </h4>
+            <p className="text-xs text-zinc-500 font-medium">Across all gamemodes</p>
+          </div>
+          <div className="text-right">
+            <span className="text-2xl font-black block leading-none">Unranked</span>
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+              {player.points || 0} POINTS
+            </span>
+          </div>
+        </div>
+
+        {/* Gamemodes Grid Tiers */}
+        <div className="grid grid-cols-4 gap-2.5 mb-6">
+          {gamemodes
+            .filter((gm) => gm.id !== 'overall')
+            .map((gm) => {
+              // Membaca key 'overall' sebagai 'crystal' dari database
+              const targetKey = gm.id === 'overall' ? 'crystal' : gm.id;
+              const tier = player.tiers?.[targetKey];
+              return (
+                <div
+                  key={gm.id}
+                  className="bg-zinc-900/40 border border-zinc-800/80 rounded-xl p-2.5 flex flex-col items-center justify-center text-center"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-zinc-900 flex items-center justify-center mb-1 border border-zinc-800/50">
+                    <img src={gm.icon} alt={gm.name} className="w-5 h-5 object-contain" />
+                  </div>
+                  <span className="text-[10px] font-extrabold uppercase text-zinc-400 tracking-wider">
+                    {gm.name}
+                  </span>
+                  <span
+                    className={`text-xs font-black mt-0.5 ${
+                      tier ? 'text-white' : 'text-zinc-600'
+                    }`}
+                  >
+                    {tier || '—'}
+                  </span>
+                </div>
+              );
+            })}
+        </div>
+
+        {/* Red Close Button */}
+        <button
+          onClick={onClose}
+          className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-2xl transition duration-200 shadow-lg shadow-red-950/50 text-sm"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const GAMEMODES_LIST = [
+  { id: 'overall', name: 'Overall', icon: '/icon/vanilla.png' },
+  { id: 'sword', name: 'Sword', icon: '/icon/sword.png' },
+  { id: 'axe', name: 'Axe', icon: '/icon/axe.png' },
+  { id: 'mace', name: 'Mace', icon: '/icon/mace.png' },
+  { id: 'diapot', name: 'Diapot', icon: '/icon/pot.png' },
+  { id: 'nethpot', name: 'NethPot', icon: '/icon/nethop.png' },
+  { id: 'smp', name: 'SMP', icon: '/icon/smp.png' },
+  { id: 'cart', name: 'Cart', icon: '/icon/cart.png' },
+  { id: 'spear', name: 'Spear', icon: '/icon/spear.png' },
+  { id: 'uhc', name: 'UHC', icon: '/icon/uhc.png' },
 ];
 
-export default function LeaderboardPage() {
+const TIER_RANKING = [
+  'HT1', 'LT1', 
+  'HT2', 'LT2', 
+  'HT3', 'LT3', 
+  'HT4', 'LT4', 
+  'HT5', 'LT5', 
+  'Tier 4', 'Tier 5'
+];
+
+export default function Home() {
+  const [activeTab, setActiveTab] = useState('overall');
   const [players, setPlayers] = useState([]);
-  const [selectedGamemode, setSelectedGamemode] = useState('overall');
-  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
 
   useEffect(() => {
-    async function fetchLeaderboard() {
+    async function fetchData() {
       setLoading(true);
-      const { data, error } = await supabase
+
+      const { data: playersData } = await supabase
         .from('players')
         .select('*')
         .order('points', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching players:', error);
-      } else {
-        setPlayers(data || []);
+      const { data: tiersData } = await supabase
+        .from('player_tiers')
+        .select('player_id, gamemode_id, tier');
+
+      if (playersData) {
+        const formatted = playersData.map((player) => {
+          const playerTiersMap = {};
+          if (tiersData) {
+            tiersData
+              .filter((t) => t.player_id === player.id)
+              .forEach((t) => {
+                playerTiersMap[t.gamemode_id] = t.tier;
+              });
+          }
+          return {
+            ...player,
+            tiers: playerTiersMap,
+          };
+        });
+
+        setPlayers(formatted);
       }
       setLoading(false);
     }
 
-    fetchLeaderboard();
-  }, [selectedGamemode]);
+    fetchData();
+  }, []);
 
-  // LOGIKA UTAMA: Berikan nomor rank asli SEBELUM difilter pencarian
-  const rankedPlayers = [...players]
-    .sort((a, b) => (b.points || 0) - (a.points || 0))
-    .map((player, index) => ({
+  // Filter & Search Logic
+  const getFilteredPlayers = () => {
+    let result = players;
+
+    // Menentukan tab mana yang dipilih (jika tab 'overall', petakan ke 'crystal' di database untuk kategori single-gamemode)
+    const targetGamemode = activeTab === 'overall' ? 'crystal' : activeTab;
+
+    if (activeTab !== 'overall') {
+      result = result.filter((player) => player.tiers?.[targetGamemode]);
+
+      result = result.sort((a, b) => {
+        const tierA = a.tiers[targetGamemode];
+        const tierB = b.tiers[targetGamemode];
+
+        const indexA = TIER_RANKING.indexOf(tierA);
+        const indexB = TIER_RANKING.indexOf(tierB);
+
+        const rankA = indexA !== -1 ? indexA : 999;
+        const rankB = indexB !== -1 ? indexB : 999;
+
+        return rankA - rankB;
+      });
+    }
+
+    // Tetapkan nomor rank asli (originalRank) SEBELUM difilter oleh pencarian
+    const rankedResult = result.map((player, index) => ({
       ...player,
-      originalRank: index + 1
+      originalRank: index
     }));
 
-  // Filter pencarian berdasarkan IGN tanpa mengubah originalRank
-  const filteredPlayers = rankedPlayers.filter((player) =>
-    player.ign?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    // Filter berdasarkan search input tanpa mengubah originalRank
+    if (searchQuery.trim() !== '') {
+      return rankedResult.filter((p) =>
+        p.ign.toLowerCase().includes(searchQuery.toLowerCase().trim())
+      );
+    }
+
+    return rankedResult;
+  };
+
+  // Handler saat menekan Enter di search bar
+  const handleSearchKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      const filtered = getFilteredPlayers();
+      if (filtered.length > 0) {
+        setSelectedPlayer(filtered[0]);
+      }
+    }
+  };
+
+  const filteredPlayers = getFilteredPlayers();
+
+  // Memakai originalRank agar badge crown & angka tidak terikat ke index array hasil filter
+  const getRankBadge = (rankIndex) => {
+    if (rankIndex === 0) return <span className="text-3xl animate-bounce">👑</span>;
+    if (rankIndex === 1) return <span className="text-2xl">🥈</span>;
+    if (rankIndex === 2) return <span className="text-2xl">🥉</span>;
+    return <span className="font-extrabold text-zinc-500 text-lg">{rankIndex + 1}.</span>;
+  };
+
+  const getTop3Style = (rankIndex) => {
+    if (rankIndex === 0) {
+      return 'bg-gradient-to-r from-amber-950/60 via-zinc-900 to-amber-950/30 border-amber-500/80 shadow-[0_0_20px_rgba(245,158,11,0.2)] hover:border-amber-400 scale-[1.01]';
+    }
+    if (rankIndex === 1) {
+      return 'bg-gradient-to-r from-slate-900 via-zinc-900 to-slate-900/50 border-slate-400/70 shadow-[0_0_15px_rgba(148,163,184,0.15)] hover:border-slate-300';
+    }
+    if (rankIndex === 2) {
+      return 'bg-gradient-to-r from-orange-950/40 via-zinc-900 to-orange-950/20 border-amber-700/70 shadow-[0_0_15px_rgba(180,83,9,0.15)] hover:border-amber-600';
+    }
+    return 'bg-zinc-900/80 border-zinc-800/80 hover:border-zinc-700';
+  };
 
   return (
-    <div className="min-h-screen bg-[#080808] text-white p-4 md:p-8 font-sans">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <main className="min-h-screen bg-zinc-950 text-white p-4 md:p-8 font-sans">
+      {/* Modal Player Pop-up */}
+      <PlayerModal
+        player={selectedPlayer}
+        gamemodes={GAMEMODES_LIST}
+        onClose={() => setSelectedPlayer(null)}
+      />
 
-        {/* 1. TOP NAVBAR */}
-        <header className="flex flex-wrap items-center justify-between gap-4 bg-[#111113] border border-[#222226] rounded-xl px-6 py-4">
-          <div className="flex items-center gap-8">
-            <h1 className="text-2xl font-black tracking-wider text-red-600 uppercase">
-              HOLLOW<span className="text-white">TIERS</span>
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* Top Navbar */}
+        <header className="flex flex-wrap items-center justify-between gap-4 bg-zinc-900/60 p-4 rounded-2xl border border-zinc-800/80 backdrop-blur">
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-black tracking-wider text-red-500 uppercase">
+              Hollow<span className="text-white">Tiers</span>
             </h1>
-            <nav className="hidden md:flex items-center gap-6 text-sm font-semibold text-gray-300">
-              <a href="#" className="flex items-center gap-2 hover:text-white transition">
-                <span>🏠</span> Home
-              </a>
-              <a href="#" className="flex items-center gap-2 text-white font-bold">
-                <span>☑️</span> Ranking
-              </a>
-              <a href="#" className="flex items-center gap-2 hover:text-white transition">
-                <span>👑</span> Hall Of Fame
-              </a>
-              <a href="#" className="flex items-center gap-2 hover:text-white transition">
-                <span>💬</span> Discord
-              </a>
-            </nav>
           </div>
 
-          <div className="flex items-center gap-3 w-full md:w-auto">
+          <nav className="flex items-center gap-6 text-sm font-bold text-zinc-400">
+            <a href="#" className="text-white hover:text-red-400">🏠 Home</a>
+            <a href="#" className="hover:text-white">☑️ Ranking</a>
+            <a href="#" className="hover:text-white">👑 Hall Of Fame</a>
+            <a href="#" className="hover:text-white">💬 Discord</a>
+          </nav>
+
+          {/* Search Bar dengan fitur Enter */}
+          <div className="flex items-center gap-3">
             <input
               type="text"
               placeholder="Search Player..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-[#18181c] border border-[#2a2a30] text-sm text-white placeholder-gray-500 rounded-lg px-4 py-2 w-full md:w-64 focus:outline-none focus:border-red-600 transition"
+              onKeyDown={handleSearchKeyDown}
+              className="bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2 text-sm text-zinc-200 focus:outline-none focus:border-red-500 w-48 transition"
             />
-            <div className="hidden sm:flex items-center gap-2 bg-[#0d281e] border border-[#1b5e3f] text-[#34d399] text-xs font-bold px-3 py-2 rounded-lg whitespace-nowrap">
-              <span className="w-2 h-2 rounded-full bg-[#34d399] animate-pulse"></span>
-              Hollow Tiers
-            </div>
           </div>
         </header>
 
-        {/* 2. GAMEMODE TABS */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-          {GAMEMODES.map((gm) => {
-            const isActive = selectedGamemode === gm.id;
-            return (
-              <button
-                key={gm.id}
-                onClick={() => setSelectedGamemode(gm.id)}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap border ${
-                  isActive
-                    ? 'bg-[#141418] border-red-600 text-white shadow-[0_0_15px_rgba(220,38,38,0.3)]'
-                    : 'bg-[#111113] border-[#222226] text-gray-400 hover:text-white hover:border-gray-700'
-                }`}
-              >
-                <span className="text-base">{gm.icon}</span>
-                <span>{gm.name}</span>
-              </button>
-            );
-          })}
+        {/* Gamemodes Selector Tabs */}
+        <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-10 gap-2">
+          {GAMEMODES_LIST.map((gm) => (
+            <button
+              key={gm.id}
+              onClick={() => setActiveTab(gm.id)}
+              className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all ${
+                activeTab === gm.id
+                  ? 'bg-zinc-900 border-red-600/80 text-white shadow-lg shadow-red-950/50 scale-105'
+                  : 'bg-zinc-900/40 border-zinc-800/60 text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200'
+              }`}
+            >
+              <img
+                src={gm.icon}
+                alt={gm.name}
+                className="w-6 h-6 mb-1 object-contain drop-shadow"
+              />
+              <span className="text-xs font-bold">{gm.name}</span>
+            </button>
+          ))}
         </div>
 
-        {/* 3. LEADERBOARD TABLE CARD */}
-        <div className="bg-[#111113] border border-[#222226] rounded-xl overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#222226] text-xs font-extrabold text-red-600 tracking-wider uppercase">
-            <div className="flex items-center gap-8">
+        {/* Leaderboard Table */}
+        <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-4 md:p-6">
+          {/* Table Header */}
+          <div className="flex items-center justify-between text-xs font-black tracking-wider text-red-500 uppercase pb-4 px-4 border-b border-zinc-800/80 mb-4">
+            <div className="flex items-center gap-6">
               <span className="w-8">#</span>
               <span>PLAYER</span>
             </div>
-            <span>TIERS</span>
+            <span>
+              {activeTab === 'overall'
+                ? 'TIERS'
+                : `${activeTab.toUpperCase()} TIER`}
+            </span>
           </div>
 
+          {/* Player Rows */}
           {loading ? (
-            <div className="py-12 text-center text-gray-500 text-sm">
-              Loading players...
-            </div>
+            <div className="text-center text-zinc-500 py-12">Loading rankings...</div>
           ) : filteredPlayers.length > 0 ? (
-            <div className="divide-y divide-[#1c1c22]">
+            <div className="flex flex-col gap-3">
               {filteredPlayers.map((player) => (
                 <div
                   key={player.id}
-                  className="flex items-center justify-between px-6 py-3.5 hover:bg-[#16161a] transition"
+                  onClick={() => setSelectedPlayer(player)}
+                  className={`flex flex-col sm:flex-row sm:items-center justify-between border p-4 rounded-2xl transition gap-4 relative overflow-hidden cursor-pointer ${getTop3Style(
+                    player.originalRank
+                  )}`}
                 >
-                  <div className="flex items-center gap-8">
-                    {/* Menggunakan player.originalRank agar nomor rank tidak berubah jadi #1 saat dicari */}
-                    <span className="w-8 font-black text-red-600 text-sm">
-                      {player.originalRank}
-                    </span>
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={`https://visage.surgeplay.com/bust/32/${player.ign || 'Steve'}`}
-                        alt={player.ign}
-                        className="w-7 h-7 rounded"
-                        onError={(e) => {
-                          e.target.src = 'https://visage.surgeplay.com/bust/32/Steve';
-                        }}
-                      />
-                      <span className="font-bold text-sm text-gray-200">
-                        {player.ign}
-                      </span>
-                      {player.region && (
-                        <span className="text-xs bg-[#1a1a20] text-gray-400 border border-[#2a2a34] px-2 py-0.5 rounded font-mono">
-                          {player.region}
-                        </span>
-                      )}
+                  {player.originalRank === 0 && (
+                    <div className="absolute top-0 right-0 bg-amber-500 text-black text-[9px] font-black px-3 py-0.5 rounded-bl-lg uppercase tracking-wider shadow">
+                      #1 Champion
+                    </div>
+                  )}
+
+                  {/* Left: Rank, Avatar, IGN, Region, Points */}
+                  <div className="flex items-center gap-4">
+                    <div className="w-8 flex justify-center">{getRankBadge(player.originalRank)}</div>
+                    <img
+                      src={`https://mc-heads.net/avatar/${player.ign}/40`}
+                      alt={player.ign}
+                      className={`w-10 h-10 rounded-xl bg-zinc-800 ${
+                        player.originalRank === 0 ? 'ring-2 ring-amber-400/80' : ''
+                      }`}
+                    />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3
+                          className={`font-bold text-base ${
+                            player.originalRank === 0 ? 'text-amber-300' : 'text-white'
+                          }`}
+                        >
+                          {player.ign}
+                        </h3>
+                        <RegionBadge region={player.region} />
+                      </div>
+                      <p className="text-xs text-zinc-400 mt-0.5">
+                        {activeTab === 'overall'
+                          ? `${player.points || 0} points`
+                          : `Tier: ${player.tiers[activeTab === 'overall' ? 'crystal' : activeTab]}`}
+                      </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <span className="font-extrabold text-sm text-amber-400">
-                      {player.points || 0} pts
-                    </span>
+                  {/* Right: Tiers Breakdown Per Gamemode */}
+                  <div className="flex items-center gap-3 overflow-x-auto py-1">
+                    {GAMEMODES_LIST.filter((gm) => gm.id !== 'overall').map((gm) => {
+                      const targetKey = gm.id === 'overall' ? 'crystal' : gm.id;
+                      const tier = player.tiers?.[targetKey];
+                      const isCurrentTab = gm.id === activeTab;
+                      return (
+                        <div
+                          key={gm.id}
+                          className={`flex flex-col items-center min-w-[36px] p-1 rounded-lg ${
+                            isCurrentTab
+                              ? 'bg-red-950/60 border border-red-800/60'
+                              : ''
+                          }`}
+                        >
+                          <img
+                            src={gm.icon}
+                            alt={gm.name}
+                            className={`w-5 h-5 mb-1 object-contain ${
+                              isCurrentTab ? 'opacity-100 scale-110' : 'opacity-70'
+                            }`}
+                          />
+                          <span
+                            className={`text-[10px] font-black ${
+                              tier ? 'text-purple-400' : 'text-zinc-600'
+                            }`}
+                          >
+                            {tier || '-'}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="py-12 text-center text-gray-500 text-sm">
-              No players found.
+            <div className="text-center text-zinc-500 py-12 italic">
+              No players found in this category.
             </div>
           )}
         </div>
-
       </div>
-    </div>
+    </main>
   );
 }
