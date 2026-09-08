@@ -42,13 +42,13 @@ const RANK_CHOICES = [
   { name: 'HT1', value: 'HT1' },
 ];
 
-// Mapping Emoji / Bendera Region
+// Mapping Custom Emoji Region (Ganti ID angka dengan ID Custom Emoji asli server kamu)
 const REGION_FLAGS = {
-  'NA': '🇺🇸 NA',
-  'EU': '🇪🇺 EU',
-  'AS': '🇮🇩 AS',
-  'AU': '🇦🇺 AU',
-  'SA': '🇧🇷 SA'
+  'NA': '<:NorthAmerica:1546889484635742351> NA', // Gunakan nama asli emoji (NorthAmerica)
+  'EU': '<:Europe:1546889606786580642> EU',
+  'AS': '<:Asia:1546889654286950500> AS',
+  'AU': '<:Ocenia:1546892233016606771> AU',
+  'SA': '<:SouthAmerica:1546889706736849137> SA'
 };
 
 // Mapping Role ID per Gamemode & Tier
