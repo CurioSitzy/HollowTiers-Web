@@ -1,8 +1,8 @@
 import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
 
-// 1. ID Channel Input & Output
-const INPUT_CHANNEL_ID = '1509184085015269516'; // Channel #result-commands (tempat ngetik)
-const OUTPUT_CHANNEL_ID = '1500797205382959164'; // GANTI dengan ID Channel Output/Hasil (misal #tier-results)
+// ID Channel Input & Output
+const INPUT_CHANNEL_ID = '1509184085015269516'; // Channel #result-commands
+const OUTPUT_CHANNEL_ID = '1500797205382959164'; // Ganti dengan ID Channel Output jika beda
 
 const RANK_CHOICES = [
     { name: 'N/A', value: 'N/A' },
@@ -33,14 +33,14 @@ export default {
                 .setRequired(true))
         .addStringOption(option => 
             option.setName('region')
-                .setDescription('Region (e.g. NA, EU, AS, AU, SA)')
+                .setDescription('Region')
                 .setRequired(true)
                 .addChoices(
-                    { name: 'NorthAmerica (NA)', value: 'NA' },
-                    { name: 'Europe (EU)', value: 'EU' },
-                    { name: 'Asia (AS)', value: 'AS' },
-                    { name: 'Australia (AU)', value: 'AU' },
-                    { name: 'SouthAmerica (SA)', value: 'SA' }
+                    { name: 'NorthAmerica (NA)', value: 'NorthAmerica [NA]' },
+                    { name: 'Europe (EU)', value: 'Europe [EU]' },
+                    { name: 'Asia (AS)', value: 'Asia [AS]' },
+                    { name: 'Australia (AU)', value: 'Australia [AU]' },
+                    { name: 'SouthAmerica (SA)', value: 'SouthAmerica [SA]' }
                 ))
         .addStringOption(option => 
             option.setName('username')
@@ -75,15 +75,13 @@ export default {
                 .addChoices(...RANK_CHOICES)),
 
     async execute(interaction, client, supabase) {
-        // Cek apakah perintah diketik di channel input yang benar
         if (interaction.channelId !== INPUT_CHANNEL_ID) {
             return await interaction.reply({
-                content: `❌ This command can only be used in <#${INPUT_CHANNEL_ID}> Channel!`,
+                content: `❌ Command ini hanya dapat digunakan di channel <#${INPUT_CHANNEL_ID}>!`,
                 flags: MessageFlags.Ephemeral
             });
         }
 
-        // Defer reply sebagai Ephemeral (hanya terlihat oleh admin/tester yang ngetik)
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const player = interaction.options.getUser('player');
@@ -94,10 +92,10 @@ export default {
         const previousRank = interaction.options.getString('previous_rank');
         const rankEarned = interaction.options.getString('rank_earned');
 
-        // 1. Simpan ke Supabase
+        // 1. Simpan SEMUA Field Lengkap ke Supabase Database
         if (supabase) {
             try {
-                await supabase.from('test_results').insert([
+                const { error } = await supabase.from('test_results').insert([
                     {
                         player_discord_id: player.id,
                         tester_discord_id: tester.id,
@@ -105,19 +103,22 @@ export default {
                         minecraft_username: username,
                         gamemode: gamemode,
                         previous_rank: previousRank,
-                        rank_earned: rankEarned,
+                        rank_earned: rankEarned, // Rank/Tier tersimpan di kolom khusus ini
+                        tier: rankEarned,       // Backup jika di DB kamu nama kolomnya 'tier'
                         created_at: new Date()
                     }
                 ]);
+
+                if (error) console.error('❌ Supabase Insert Error:', error);
             } catch (dbErr) {
-                console.error('Supabase Error:', dbErr);
+                console.error('❌ Database Exception:', dbErr);
             }
         }
 
         // 2. Render Avatar 3D
         const minecraftAvatarUrl = `https://visage.surgeplay.com/bust/512/${username}`;
 
-        // 3. Buat Embed
+        // 3. Embed Display
         const embed = new EmbedBuilder()
             .setAuthor({ 
                 name: `${username}'s Test Results`, 
@@ -134,7 +135,7 @@ export default {
                 { name: 'Gamemode:', value: `\`${gamemode}\``, inline: false }
             );
 
-        // 4. Kirim Embed ke Output Channel
+        // 4. Send Embed ke Channel Output
         try {
             const outputChannel = await client.channels.fetch(OUTPUT_CHANNEL_ID);
             if (outputChannel) {
@@ -144,15 +145,11 @@ export default {
                 });
             }
         } catch (chanErr) {
-            console.error('Gagal mengirim ke output channel:', chanErr);
-            return await interaction.editReply({
-                content: `❌ Failed sending to output channel!`
-            });
+            console.error('Gagal mengirim ke channel output:', chanErr);
         }
 
-        // 5. Konfirmasi ke pemakai command di #result-commands
         return await interaction.editReply({
-            content: `✅ Test result has been sent to <#${OUTPUT_CHANNEL_ID}> and saved to the database!`
+            content: `✅ Test result berhasil tersimpan di database dan dikirim ke <#${OUTPUT_CHANNEL_ID}>!`
         });
     }
 };
