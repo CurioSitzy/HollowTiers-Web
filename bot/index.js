@@ -16,7 +16,7 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 
 // ID Channels
 const COMMAND_CHANNEL_ID = '1509184085015269516'; // #result-commands
-const OUTPUT_CHANNEL_ID = 'MASUKKAN_ID_CHANNEL_RESULTS_DI_SINI'; // Ganti pakai ID channel #results asli!
+const OUTPUT_CHANNEL_ID = '1500797205382959164'; // Ganti pakai ID channel #results asli!
 
 // Flag Region Mapping (Ganti ID_EMOJI dengan ID custom emoji server lu)
 const REGION_FLAGS = {
