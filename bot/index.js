@@ -1,9 +1,8 @@
 import { Client, GatewayIntentBits, Collection } from 'discord.js';
-import { loadCommands, registerCommands } from './handlers/loaders/commandLoader.js';
-import { logger } from './utils/logger.js';
-import botConfig from './config/bot.js';
+import { loadCommands, registerCommands } from '../src/handlers/loaders/commandLoader.js';
+import { logger } from '../src/utils/logger.js';
+import botConfig from '../src/config/bot.js';
 
-// Initialize Client with required Intents
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -13,31 +12,29 @@ const client = new Client({
     ]
 });
 
-// Setup Collection and Attach Config
 client.commands = new Collection();
 client.config = botConfig;
 
 async function bootstrap() {
     try {
-        logger.info('Initializing bot startup...');
+        logger.info('Initializing bot startup sequence...');
 
-        // 1. Load all commands recursively into memory first
+        // 1. Load all commands into memory from src directory
         await loadCommands(client);
 
-        // 2. Register ready event
+        // 2. Handle bot ready event
         client.once('ready', async (readyClient) => {
-            logger.info(`Logged in as ${readyClient.user.tag}`);
+            logger.info(`Successfully logged in as ${readyClient.user.tag}`);
 
-            // Register Slash Commands globally via Discord API
             try {
                 const clientId = botConfig.bot?.clientId || process.env.CLIENT_ID;
                 await registerCommands(client, { clientId });
             } catch (regError) {
-                logger.error('Failed to register commands during startup:', regError);
+                logger.error('Failed to register global slash commands:', regError);
             }
         });
 
-        // 3. Handle Slash Command interactions
+        // 3. Handle interaction events
         client.on('interactionCreate', async (interaction) => {
             if (!interaction.isChatInputCommand()) return;
 
@@ -46,7 +43,7 @@ async function bootstrap() {
             if (!command) {
                 logger.warn(`Command /${interaction.commandName} was not found in memory.`);
                 return interaction.reply({
-                    content: 'This command is unavailable or not registered.',
+                    content: 'This command is currently unavailable.',
                     ephemeral: true
                 });
             }
@@ -54,27 +51,27 @@ async function bootstrap() {
             try {
                 await command.execute(interaction, client);
             } catch (error) {
-                logger.error(`Error executing /${interaction.commandName}:`, error);
+                logger.error(`Error executing command /${interaction.commandName}:`, error);
 
-                const errorResponse = {
-                    content: 'There was an error executing this command!',
+                const errorPayload = {
+                    content: 'An error occurred while executing this command.',
                     ephemeral: true
                 };
 
                 if (interaction.replied || interaction.deferred) {
-                    await interaction.followUp(errorResponse);
+                    await interaction.followUp(errorPayload);
                 } else {
-                    await interaction.reply(errorResponse);
+                    await interaction.reply(errorPayload);
                 }
             }
         });
 
-        // 4. Authenticate and connect
+        // 4. Authenticate bot
         const token = botConfig.bot?.token || process.env.DISCORD_TOKEN;
         await client.login(token);
 
     } catch (error) {
-        logger.error('Fatal error during bot initialization:', error);
+        logger.error('Fatal initialization error:', error);
         process.exit(1);
     }
 }
