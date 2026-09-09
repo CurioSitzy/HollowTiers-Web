@@ -1,7 +1,7 @@
 import { Client, GatewayIntentBits, Collection } from 'discord.js';
 import { loadCommands, registerCommands } from '../src/handlers/loaders/commandLoader.js';
 import { logger } from '../src/utils/logger.js';
-import botConfig from '../src/config/bot.js';
+import botConfig from '../src/config/application.js';
 
 const client = new Client({
     intents: [
@@ -19,7 +19,7 @@ async function bootstrap() {
     try {
         logger.info('Initializing bot startup sequence...');
 
-        // 1. Load all commands into memory from src directory
+        // 1. Load all commands into memory
         await loadCommands(client);
 
         // 2. Handle bot ready event
