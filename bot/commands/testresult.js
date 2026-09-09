@@ -1,9 +1,9 @@
 import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
 
-// ID Channel Khusus Command Result
-const COMMAND_CHANNEL_ID = '1509184085015269516';
+// 1. ID Channel Input & Output
+const INPUT_CHANNEL_ID = '1509184085015269516'; // Channel #result-commands (tempat ngetik)
+const OUTPUT_CHANNEL_ID = '1500797205382959164'; // GANTI dengan ID Channel Output/Hasil (misal #tier-results)
 
-// Pilihan Rank dari N/A sampai HT1
 const RANK_CHOICES = [
     { name: 'N/A', value: 'N/A' },
     { name: 'LT5', value: 'LT5' },
@@ -75,18 +75,17 @@ export default {
                 .addChoices(...RANK_CHOICES)),
 
     async execute(interaction, client, supabase) {
-        // Cek ID Channel terlebih dahulu
-        if (interaction.channelId !== COMMAND_CHANNEL_ID) {
+        // Cek apakah perintah diketik di channel input yang benar
+        if (interaction.channelId !== INPUT_CHANNEL_ID) {
             return await interaction.reply({
-                content: `❌ Command ini hanya dapat digunakan di channel <#${COMMAND_CHANNEL_ID}>!`,
+                content: `❌ Command ini hanya dapat digunakan di channel <#${INPUT_CHANNEL_ID}>!`,
                 flags: MessageFlags.Ephemeral
             });
         }
 
-        // Defer reply secara publik
-        await interaction.deferReply();
+        // Defer reply sebagai Ephemeral (hanya terlihat oleh admin/tester yang ngetik)
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-        // Mengambil seluruh input nilai opsi
         const player = interaction.options.getUser('player');
         const tester = interaction.options.getUser('tester');
         const region = interaction.options.getString('region');
@@ -95,7 +94,7 @@ export default {
         const previousRank = interaction.options.getString('previous_rank');
         const rankEarned = interaction.options.getString('rank_earned');
 
-        // 1. Simpan data ke Database Supabase
+        // 1. Simpan ke Supabase
         if (supabase) {
             try {
                 await supabase.from('test_results').insert([
@@ -115,16 +114,16 @@ export default {
             }
         }
 
-        // 2. Render Bust 3D Skin Minecraft via Visage API
+        // 2. Render Avatar 3D
         const minecraftAvatarUrl = `https://visage.surgeplay.com/bust/512/${username}`;
 
-        // 3. Susun Embed persis sesuai tampilan visual
+        // 3. Buat Embed
         const embed = new EmbedBuilder()
             .setAuthor({ 
                 name: `${username}'s Test Results`, 
                 iconURL: player.displayAvatarURL({ dynamic: true }) 
             })
-            .setColor('#D00000') // Garis pinggir warna merah
+            .setColor('#D00000')
             .setThumbnail(minecraftAvatarUrl)
             .addFields(
                 { name: 'Tester:', value: `<@${tester.id}>`, inline: false },
@@ -135,10 +134,25 @@ export default {
                 { name: 'Gamemode:', value: `\`${gamemode}\``, inline: false }
             );
 
-        // 4. Balas dengan teks mention + Embed
+        // 4. Kirim Embed ke Output Channel
+        try {
+            const outputChannel = await client.channels.fetch(OUTPUT_CHANNEL_ID);
+            if (outputChannel) {
+                await outputChannel.send({
+                    content: `<@${player.id}> [${region}]`,
+                    embeds: [embed]
+                });
+            }
+        } catch (chanErr) {
+            console.error('Gagal mengirim ke output channel:', chanErr);
+            return await interaction.editReply({
+                content: `❌ Gagal mengirim hasil ke output channel. Pastikan ID Channel benar!`
+            });
+        }
+
+        // 5. Konfirmasi ke pemakai command di #result-commands
         return await interaction.editReply({
-            content: `<@${player.id}> [${region}]`,
-            embeds: [embed]
+            content: `✅ Test result berhasil dikirim ke <#${OUTPUT_CHANNEL_ID}> dan disimpan ke database!`
         });
     }
 };
