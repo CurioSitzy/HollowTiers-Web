@@ -1,6 +1,19 @@
 import { Client, GatewayIntentBits, Collection, REST, Routes } from 'discord.js';
+import { createClient } from '@supabase/supabase-js';
+import fs from 'fs';
+import path from 'path';
 
-// Initialize Discord Client
+// 1. Inisialisasi Supabase Client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+    console.warn('⚠️ Warning: Supabase credentials missing in environment variables!');
+}
+
+export const supabase = createClient(supabaseUrl, supabaseKey);
+
+// 2. Initialize Discord Client
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -12,11 +25,31 @@ const client = new Client({
 
 client.commands = new Collection();
 
+// 3. Load File Commands Otomatis dari Folder bot/commands
+const loadCommands = async () => {
+    const commandsPath = path.join(process.cwd(), 'bot', 'commands');
+    if (fs.existsSync(commandsPath)) {
+        const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+        for (const file of commandFiles) {
+            const filePath = path.join(commandsPath, file);
+            const command = await import(`file://${filePath}`);
+            
+            const cmdData = command.default || command;
+            if (cmdData && cmdData.data) {
+                client.commands.set(cmdData.data.name, cmdData);
+            }
+        }
+    }
+};
+
 // Event: Bot Online
 client.once('ready', async (readyClient) => {
     console.log(`✅ Bot successfully logged in as ${readyClient.user.tag}`);
 
-    // --- SYNC COMMAND AMAN (Mencegah command lain terhapus) ---
+    // Load command local ke memori bot
+    await loadCommands();
+
+    // 4. Safe Sync: Ambil command bot utama, timpa /testresult saja, lalu upload ulang
     try {
         const token = process.env.DISCORD_TOKEN;
         const clientId = process.env.CLIENT_ID || readyClient.user.id;
@@ -28,23 +61,21 @@ client.once('ready', async (readyClient) => {
                 ? Routes.applicationGuildCommands(clientId, guildId) 
                 : Routes.applicationCommands(clientId);
 
-            // 1. Ambil daftar command yang sudah terdaftar di Discord saat ini
+            // Fetch semua command yang ada di server/bot saat ini
             const existingCommands = await rest.get(route);
 
-            // 2. Definisi command /testresult milik web
-            const testResultCommand = {
-                name: 'testresult',
-                description: 'Submit or view test result',
-                options: [] // Tambahkan options jika command /testresult butuh parameter
-            };
+            // Ambil daftar command lokal di repo web ini
+            const localCommands = Array.from(client.commands.values()).map(cmd => 
+                cmd.data.toJSON ? cmd.data.toJSON() : cmd.data
+            );
 
-            // 3. Gabungkan: Pertahankan command lama, timpa/tambah /testresult saja
-            const updatedCommands = existingCommands.filter(cmd => cmd.name !== 'testresult');
-            updatedCommands.push(testResultCommand);
+            // Merge Map: pertahankan command lama, timpa jika namanya sama (/testresult)
+            const mergedMap = new Map();
+            existingCommands.forEach(cmd => mergedMap.set(cmd.name, cmd));
+            localCommands.forEach(cmd => mergedMap.set(cmd.name, cmd));
 
-            // 4. Update ke Discord
-            await rest.put(route, { body: updatedCommands });
-            console.log('✅ Synchronized /testresult safely without removing existing commands!');
+            await rest.put(route, { body: Array.from(mergedMap.values()) });
+            console.log('✅ Commands synchronized safely! /testresult updated without deleting other commands.');
         }
     } catch (err) {
         console.error('⚠️ Failed to sync commands safely:', err.message);
@@ -65,7 +96,8 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     try {
-        await command.execute(interaction, client);
+        // Eksekusi command dan teruskan client + supabase instance
+        await command.execute(interaction, client, supabase);
     } catch (error) {
         console.error(`Error executing /${interaction.commandName}:`, error);
         
