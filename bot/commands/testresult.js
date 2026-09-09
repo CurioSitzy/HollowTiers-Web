@@ -17,13 +17,13 @@ const RANK_CHOICES = [
     { name: 'HT1', value: 'HT1' },
 ];
 
-// Tabel Nilai Poin per Tier
+// MCTiers Point System
 const TIER_POINTS = {
-    'HT1': 10,
-    'LT1': 9,
-    'HT2': 8,
-    'LT2': 7,
-    'HT3': 6,
+    'HT1': 60,
+    'LT1': 45,
+    'HT2': 30,
+    'LT2': 20,
+    'HT3': 10,
     'LT3': 5,
     'HT4': 4,
     'LT4': 3,
@@ -32,19 +32,19 @@ const TIER_POINTS = {
     'N/A': 0
 };
 
-// Mapping pilihan gamemode ke ID di tabel gamemodes
+// Mapping Gamemode ke ID Supabase & Singkatan Role
 const GAMEMODE_MAPPING = {
-    'Sword': 'sword',
-    'Axe': 'axe',
-    'Crystal': 'crystal',
-    'Vanilla': 'vanilla',
-    'SMP': 'smp',
-    'Diamond SMP': 'diasmp',
-    'Pot': 'pot',
-    'UHC': 'uhc',
-    'Netherite OP': 'nethop',
-    'Cart': 'cart',
-    'Spear Mace': 'spearmace'
+    'Sword': { dbId: 'sword', roleKeyword: 'sword' },
+    'Axe': { dbId: 'axe', roleKeyword: 'axe' },
+    'Crystal': { dbId: 'crystal', roleKeyword: 'crystal' },
+    'Vanilla': { dbId: 'vanilla', roleKeyword: 'vanilla' },
+    'SMP': { dbId: 'smp', roleKeyword: 'smp' },
+    'Diamond SMP': { dbId: 'diasmp', roleKeyword: 'diamond smp' },
+    'Pot': { dbId: 'pot', roleKeyword: 'pot' },
+    'UHC': { dbId: 'uhc', roleKeyword: 'uhc' },
+    'Netherite OP': { dbId: 'nethop', roleKeyword: 'nethop' },
+    'Cart': { dbId: 'cart', roleKeyword: 'cart' },
+    'Spear Mace': { dbId: 'spearmace', roleKeyword: 'mace' } // Mengatasi pencarian role 'Mace'
 };
 
 export default {
@@ -121,39 +121,45 @@ export default {
         const previousRank = interaction.options.getString('previous_rank');
         const rankEarned = interaction.options.getString('rank_earned');
 
+        const modeInfo = GAMEMODE_MAPPING[gamemode] || { dbId: gamemode.toLowerCase(), roleKeyword: gamemode.toLowerCase() };
+
         // 1. AUTO ADD DISCORD ROLE
         let roleAddedStatus = '';
         if (interaction.guild && rankEarned !== 'N/A') {
             try {
                 const member = await interaction.guild.members.fetch(player.id).catch(() => null);
                 if (member) {
-                    const targetRole = interaction.guild.roles.cache.find(role => {
-                        const name = role.name.toLowerCase();
-                        const rankStr = rankEarned.toLowerCase();
-                        const modeStr = gamemode.toLowerCase();
+                    const rankStr = rankEarned.toLowerCase(); // contoh: 'lt5'
+                    const modeStr = modeInfo.roleKeyword.toLowerCase(); // contoh: 'mace'
 
+                    // Cari role yang cocok di server
+                    const targetRole = interaction.guild.roles.cache.find(role => {
+                        const rName = role.name.toLowerCase();
                         return (
-                            name === `${rankStr} ${modeStr}` ||
-                            name === `${modeStr} ${rankStr}` ||
-                            name === `${rankStr}-${modeStr}` ||
-                            name === rankStr
+                            rName === `${rankStr} ${modeStr}` || // lt5 mace
+                            rName === `${modeStr} ${rankStr}` || // mace lt5
+                            rName === `${rankStr}-${modeStr}` || // lt5-mace
+                            rName === `${rankStr} ${gamemode.toLowerCase()}` // fallback jika nama role 'LT5 Spear Mace'
                         );
                     });
 
                     if (targetRole) {
                         await member.roles.add(targetRole);
                         roleAddedStatus = `\n🎖️ Role **${targetRole.name}** berhasil diberikan!`;
+                    } else {
+                        console.warn(`⚠️ Role tidak ditemukan di Discord untuk: ${rankEarned} ${gamemode}`);
+                        roleAddedStatus = `\n⚠️ Role untuk **${rankEarned} ${gamemode}** tidak ditemukan di server!`;
                     }
                 }
             } catch (roleErr) {
                 console.error('❌ Error giving role:', roleErr);
+                roleAddedStatus = `\n❌ Gagal memberikan role (Pastikan posisi role bot di Server Settings berada di ATAS role tier).`;
             }
         }
 
         // 2. SIMPAN KE DATABASE SUPABASE & HITUNG POIN
         if (supabase) {
             try {
-                // A. Simpan/Update Player ke tabel `players`
                 const { data: playerData, error: playerErr } = await supabase
                     .from('players')
                     .upsert([
@@ -171,15 +177,13 @@ export default {
                     console.error('❌ Error saving to players:', playerErr);
                 } else if (playerData) {
                     const playerId = playerData.id;
-                    const mappedGamemodeId = GAMEMODE_MAPPING[gamemode] || gamemode.toLowerCase();
 
-                    // B. Simpan / Update Tier ke `player_tiers`
                     const { error: tierErr } = await supabase
                         .from('player_tiers')
                         .upsert([
                             {
                                 player_id: playerId,
-                                gamemode_id: mappedGamemodeId,
+                                gamemode_id: modeInfo.dbId,
                                 tier: rankEarned,
                                 updated_at: new Date().toISOString()
                             }
@@ -188,7 +192,7 @@ export default {
                     if (tierErr) {
                         console.error('❌ Error saving to player_tiers:', tierErr);
                     } else {
-                        // C. Hitung Ulang Total Poin Player dari Semua Gamemode yang Dia Punya
+                        // Hitung total poin
                         const { data: allTiers, error: fetchTiersErr } = await supabase
                             .from('player_tiers')
                             .select('tier')
@@ -196,17 +200,14 @@ export default {
 
                         if (!fetchTiersErr && allTiers) {
                             const totalPoints = allTiers.reduce((sum, item) => {
-                                const pt = TIER_POINTS[item.tier] || 0;
-                                return sum + pt;
+                                return sum + (TIER_POINTS[item.tier] || 0);
                             }, 0);
 
-                            // Update total poin ke tabel players
                             const { error: updatePointErr } = await supabase
                                 .from('players')
                                 .update({ points: totalPoints })
                                 .eq('id', playerId);
 
-                            // Jika di DB kamu nama kolom poinnya 'point' (tanpa s), coba cadangan ini jika 'points' error
                             if (updatePointErr && updatePointErr.code === 'PGRST204') {
                                 await supabase
                                     .from('players')
