@@ -1,7 +1,7 @@
 require('dotenv').config({ path: '.env.local' });
 require('dotenv').config();
 
-const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, MessageFlags, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, MessageFlags, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const { createClient } = require('@supabase/supabase-js');
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -18,7 +18,7 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 const COMMAND_CHANNEL_ID = '1509184085015269516'; // #result-commands
 const OUTPUT_CHANNEL_ID = '1500797205382959164'; // Ganti pakai ID channel #results asli!
 
-// Flag Region Mapping (Ganti ID_EMOJI dengan ID custom emoji server lu)
+// Flag Region Mapping
 const REGION_FLAGS = {
   'NorthAmerica': '<:NorthAmerica:1546889484635742351>',
   'Europe': '<:Europe:1546889606786580642>',
@@ -142,7 +142,7 @@ const TIER_ROLES = {
 
 TIER_ROLES['Vanilla'] = TIER_ROLES['Crystal'];
 
-// Register Slash Commands
+// Register All Slash Commands
 async function registerCommands() {
   const commands = [
     new SlashCommandBuilder()
@@ -152,7 +152,7 @@ async function registerCommands() {
       .addUserOption(opt => opt.setName('tester').setDescription('The tester who conducted the test').setRequired(true))
       .addStringOption(opt => 
         opt.setName('region')
-          .setDescription('Region (e.g. NorthAmerica, Europe, Asia, Australia, SouthAmerica)')
+          .setDescription('Region')
           .setRequired(true)
           .addChoices(
             { name: 'NorthAmerica', value: 'NorthAmerica' },
@@ -181,20 +181,40 @@ async function registerCommands() {
           .setRequired(true)
           .addChoices(...RANK_CHOICES)
       ),
+
     new SlashCommandBuilder()
       .setName('setup')
-      .setDescription('Setup bot configuration')
+      .setDescription('Setup bot configuration'),
+
+    new SlashCommandBuilder()
+      .setName('pull')
+      .setDescription('Pull a player to testing queue')
+      .addUserOption(opt => opt.setName('player').setDescription('Player to pull').setRequired(true)),
+
+    new SlashCommandBuilder()
+      .setName('close')
+      .setDescription('Close current testing session / channel'),
+
+    new SlashCommandBuilder()
+      .setName('setup-queue')
+      .setDescription('Setup testing queue panel')
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+    new SlashCommandBuilder()
+      .setName('setup-waitlist')
+      .setDescription('Setup evaluation waitlist panel')
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   ].map(c => c.toJSON());
 
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
   try {
-    console.log('🔄 Updating Slash Commands...');
+    console.log('🔄 Reloading all Slash Commands...');
     await rest.put(
       Routes.applicationCommands(client.user.id),
       { body: commands }
     );
-    console.log('✅ Slash Commands registered successfully!');
+    console.log('✅ All Slash Commands registered successfully!');
   } catch (err) {
     console.error('❌ Failed to update Slash Commands:', err);
   }
@@ -208,6 +228,7 @@ client.once('ready', async () => {
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
+  // --- COMMAND: /testresult ---
   if (interaction.commandName === 'testresult') {
     try {
       if (!interaction.deferred && !interaction.replied) {
@@ -233,7 +254,6 @@ client.on('interactionCreate', async interaction => {
     const rankEarned = interaction.options.getString('rank_earned');
 
     try {
-      // 1. Supabase Operations
       const { data: existingPlayers, error: fetchError } = await supabase
         .from('players')
         .select('*')
@@ -296,7 +316,6 @@ client.on('interactionCreate', async interaction => {
         .update({ points: totalPoints })
         .eq('id', playerDb.id);
 
-      // 2. Discord Roles Operations
       const member = await interaction.guild.members.fetch(player.id).catch(() => null);
 
       if (member && TIER_ROLES[gamemode]) {
@@ -315,7 +334,6 @@ client.on('interactionCreate', async interaction => {
         }
       }
 
-      // 3. SEND EMBED TO OUTPUT CHANNEL
       const formattedRegion = REGION_FLAGS[region] || `\`${region}\``;
 
       const embed = new EmbedBuilder()
@@ -341,7 +359,6 @@ client.on('interactionCreate', async interaction => {
       if (targetChannel) {
         const resultMessage = await targetChannel.send({ content: `<@${player.id}>`, embeds: [embed] });
 
-        // 4. AUTO REACTION
         const emojis = ['🎉', '💀', '😱', '🔥', '🏆'];
         (async () => {
           for (const emoji of emojis) {
@@ -367,10 +384,43 @@ client.on('interactionCreate', async interaction => {
     }
   }
 
-  // --- LOGIKA COMMAND: /setup ---
+  // --- COMMAND: /setup ---
   if (interaction.commandName === 'setup') {
     await interaction.reply({
       content: '⚙️ Setup command executed successfully!',
+      flags: MessageFlags.Ephemeral
+    });
+  }
+
+  // --- COMMAND: /pull ---
+  if (interaction.commandName === 'pull') {
+    const player = interaction.options.getUser('player');
+    await interaction.reply({
+      content: `📌 Pulling <@${player.id}> to queue...`,
+      flags: MessageFlags.Ephemeral
+    });
+  }
+
+  // --- COMMAND: /close ---
+  if (interaction.commandName === 'close') {
+    await interaction.reply({
+      content: '🔒 Closing testing session...',
+      flags: MessageFlags.Ephemeral
+    });
+  }
+
+  // --- COMMAND: /setup-queue ---
+  if (interaction.commandName === 'setup-queue') {
+    await interaction.reply({
+      content: '📊 Queue panel setup initiated!',
+      flags: MessageFlags.Ephemeral
+    });
+  }
+
+  // --- COMMAND: /setup-waitlist ---
+  if (interaction.commandName === 'setup-waitlist') {
+    await interaction.reply({
+      content: '📋 Waitlist panel setup initiated!',
       flags: MessageFlags.Ephemeral
     });
   }
