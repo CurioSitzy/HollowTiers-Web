@@ -48,22 +48,43 @@ for (const file of commandFiles) {
 }
 
 // ==========================================
-// REGISTER ALL COMMANDS TO DISCORD API
+// SAFE REGISTER COMMANDS (PATCH/POST ONLY - NO OVERWRITE)
 // ==========================================
 async function registerCommands() {
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
   try {
-    console.log(`🔄 Deploying ${commandsArray.length} Slash Commands...`);
-    
-    await rest.put(
-      Routes.applicationCommands(client.user.id),
-      { body: commandsArray }
+    console.log(`🔄 Syncing ${commandsArray.length} Slash Commands without overwriting existing ones...`);
+
+    // 1. Fetch current active commands from Discord API
+    const currentCommands = await rest.get(
+      Routes.applicationCommands(client.user.id)
     );
-    
-    console.log('✅ All Slash Commands successfully registered without overwriting!');
+
+    // 2. Loop through each command loaded in web and sync individually
+    for (const cmdData of commandsArray) {
+      const existingCmd = currentCommands.find(c => c.name === cmdData.name);
+
+      if (existingCmd) {
+        // Update ONLY this command using its specific Command ID
+        await rest.patch(
+          Routes.applicationCommand(client.user.id, existingCmd.id),
+          { body: cmdData }
+        );
+        console.log(`✅ Successfully updated /${cmdData.name} (PATCH)`);
+      } else {
+        // Add new command without affecting other registered commands
+        await rest.post(
+          Routes.applicationCommands(client.user.id),
+          { body: cmdData }
+        );
+        console.log(`✅ Successfully registered /${cmdData.name} (POST)`);
+      }
+    }
+
+    console.log('✅ Command sync completed safely!');
   } catch (err) {
-    console.error('❌ Failed to register Slash Commands:', err);
+    console.error('❌ Failed to sync Slash Commands:', err);
   }
 }
 
