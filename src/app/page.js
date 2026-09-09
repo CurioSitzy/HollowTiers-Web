@@ -124,8 +124,8 @@ function PlayerModal({ player, gamemodes, onClose }) {
           {gamemodes
             .filter((gm) => gm.id !== 'overall')
             .map((gm) => {
-              const targetKey = gm.id === 'vanilla' ? 'crystal' : gm.id;
-              const tier = player.tiers?.[targetKey];
+              // ✅ Menggunakan ID asli gamemode tanpa menukarnya ke 'crystal'
+              const tier = player.tiers?.[gm.id];
               return (
                 <div
                   key={gm.id}
@@ -154,9 +154,9 @@ function PlayerModal({ player, gamemodes, onClose }) {
   );
 }
 
-// Mengganti icon Overall menjadi custom image PNG
+// Daftar Gamemode
 const GAMEMODES_LIST = [
-  { id: 'overall', name: 'Overall', icon: '/icon/overall.png' }, // Path ke custom icon kamu
+  { id: 'overall', name: 'Overall', icon: '/icon/overall.png' },
   { id: 'vanilla', name: 'Vanilla', icon: '/icon/vanilla.png' },
   { id: 'sword', name: 'Sword', icon: '/icon/sword.png' },
   { id: 'axe', name: 'Axe', icon: '/icon/axe.png' },
@@ -230,14 +230,13 @@ export default function Home() {
   const getFilteredPlayers = () => {
     let result = players;
 
-    const targetGamemode = activeTab === 'vanilla' ? 'crystal' : activeTab;
-
+    // ✅ Menggunakan activeTab langsung tanpa dikonversi ke 'crystal'
     if (activeTab !== 'overall') {
-      result = result.filter((player) => player.tiers?.[targetGamemode]);
+      result = result.filter((player) => player.tiers?.[activeTab]);
 
       result = result.sort((a, b) => {
-        const tierA = a.tiers[targetGamemode];
-        const tierB = b.tiers[targetGamemode];
+        const tierA = a.tiers[activeTab];
+        const tierB = b.tiers[activeTab];
 
         const indexA = TIER_RANKING.indexOf(tierA);
         const indexB = TIER_RANKING.indexOf(tierB);
@@ -407,13 +406,8 @@ export default function Home() {
                         ) : (
                           <span className="flex items-center gap-1 mt-1">
                             Tier:{' '}
-                            <TierBadge
-                              tier={
-                                player.tiers[
-                                  activeTab === 'vanilla' ? 'crystal' : activeTab
-                                ]
-                              }
-                            />
+                            {/* ✅ Mengambil tier dengan activeTab secara langsung */}
+                            <TierBadge tier={player.tiers[activeTab]} />
                           </span>
                         )}
                       </p>
@@ -422,8 +416,8 @@ export default function Home() {
 
                   <div className="flex items-center gap-3 overflow-x-auto py-1">
                     {GAMEMODES_LIST.filter((gm) => gm.id !== 'overall').map((gm) => {
-                      const targetKey = gm.id === 'vanilla' ? 'crystal' : gm.id;
-                      const tier = player.tiers?.[targetKey];
+                      // ✅ Mengambil tier dari gm.id langsung
+                      const tier = player.tiers?.[gm.id];
                       const isCurrentTab = gm.id === activeTab;
                       return (
                         <div
