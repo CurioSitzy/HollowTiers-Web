@@ -1,7 +1,7 @@
 import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
 
 const INPUT_CHANNEL_ID = '1509184085015269516'; // Channel #result-commands
-const OUTPUT_CHANNEL_ID = '1500797205382959164'; // ID Channel Output Embed
+const OUTPUT_CHANNEL_ID = '1500797205382959164'; // Channel Output Embed
 
 const RANK_CHOICES = [
     { name: 'N/A', value: 'N/A' },
@@ -16,6 +16,21 @@ const RANK_CHOICES = [
     { name: 'LT1', value: 'LT1' },
     { name: 'HT1', value: 'HT1' },
 ];
+
+// Mapping pilihan gamemode ke ID yang ada di tabel gamemodes Supabase
+const GAMEMODE_MAPPING = {
+    'Sword': 'sword',
+    'Axe': 'axe',
+    'Crystal': 'crystal',
+    'Vanilla': 'vanilla',
+    'SMP': 'smp',
+    'Diamond SMP': 'diasmp',
+    'Pot': 'pot',
+    'UHC': 'uhc',
+    'Netherite OP': 'nethop',
+    'Cart': 'cart',
+    'Spear Mace': 'spearmace'
+};
 
 export default {
     category: 'Tiers',
@@ -123,34 +138,40 @@ export default {
         // 2. SIMPAN KE DATABASE SUPABASE
         if (supabase) {
             try {
-                // A. Upsert ke tabel `players` dengan memprioritaskan Unique Key 'ign'
-                const { error: playerErr } = await supabase
+                // A. Simpan/Update Player ke tabel `players` & Ambil UUID (`id`)
+                const { data: playerData, error: playerErr } = await supabase
                     .from('players')
                     .upsert([
                         {
                             discord_id: player.id,
                             ign: username,
                             region: region,
-                            type: 'player'
+                            type: 'Java'
                         }
-                    ], { onConflict: 'ign' });
+                    ], { onConflict: 'ign' })
+                    .select('id')
+                    .single();
 
-                if (playerErr) console.error('❌ Error saving to players:', playerErr);
+                if (playerErr) {
+                    console.error('❌ Error saving to players:', playerErr);
+                } else if (playerData) {
+                    const playerId = playerData.id;
+                    const mappedGamemodeId = GAMEMODE_MAPPING[gamemode] || gamemode.toLowerCase();
 
-                // B. Simpan ke tabel `player_tiers` (Gunakan 'tier' atau 'rank' sesuai schema Supabase)
-                const { error: tierErr } = await supabase
-                    .from('player_tiers')
-                    .insert([
-                        {
-                            player_id: player.id,
-                            tier: rankEarned,       // Menggunakan kolom 'tier'
-                            rank: rankEarned,       // Backup jika di DB bernama 'rank'
-                            tester_id: tester.id,
-                            region: region
-                        }
-                    ]);
+                    // B. Simpan / Upsert ke tabel `player_tiers`
+                    const { error: tierErr } = await supabase
+                        .from('player_tiers')
+                        .upsert([
+                            {
+                                player_id: playerId,
+                                gamemode_id: mappedGamemodeId,
+                                tier: rankEarned,
+                                updated_at: new Date().toISOString()
+                            }
+                        ], { onConflict: 'player_id,gamemode_id' });
 
-                if (tierErr) console.error('❌ Error saving to player_tiers:', tierErr);
+                    if (tierErr) console.error('❌ Error saving to player_tiers:', tierErr);
+                }
             } catch (dbErr) {
                 console.error('❌ Database Exception:', dbErr);
             }
