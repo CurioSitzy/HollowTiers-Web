@@ -1,23 +1,23 @@
 require('dotenv').config({ path: '.env.local' });
 require('dotenv').config();
 
-const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, MessageFlags, EmbedBuilder } = require('discord.js');
 const { createClient } = require('@supabase/supabase-js');
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
-  console.error('❌ Error: SUPABASE_URL atau SUPABASE_SERVICE_ROLE_KEY tidak terdeteksi!');
+  console.error('❌ Error: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing!');
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 
-// ID Channel untuk command
+// Channel ID
 const COMMAND_CHANNEL_ID = '1509184085015269516'; // #result-commands
 
-// Poin berdasarkan Tier
+// Points per Tier
 const TIER_POINTS = {
   'HT1': 100, 'LT1': 80,
   'HT2': 60,  'LT2': 50,
@@ -26,7 +26,7 @@ const TIER_POINTS = {
   'HT5': 10,  'LT5': 5,
 };
 
-// Daftar pilihan Rank
+// Rank choices
 const RANK_CHOICES = [
   { name: 'N/A', value: 'N/A' },
   { name: 'LT5', value: 'LT5' },
@@ -41,21 +41,22 @@ const RANK_CHOICES = [
   { name: 'HT1', value: 'HT1' },
 ];
 
-// Daftar pilihan Gamemode untuk Slash Command (Sudah termasuk Diamond SMP)
+// Gamemode choices
 const GAMEMODE_CHOICES = [
-  { name: 'Vanilla', value: 'Vanilla' },
   { name: 'Sword', value: 'Sword' },
   { name: 'Axe', value: 'Axe' },
-  { name: 'UHC', value: 'UHC' },
+  { name: 'Crystal', value: 'Crystal' },
+  { name: 'Vanilla', value: 'Vanilla' },
   { name: 'SMP', value: 'SMP' },
   { name: 'Diamond SMP', value: 'Diamond SMP' },
   { name: 'Pot', value: 'Pot' },
+  { name: 'UHC', value: 'UHC' },
   { name: 'Netherite OP', value: 'Netherite OP' },
   { name: 'Cart', value: 'Cart' },
   { name: 'Spear Mace', value: 'Spear Mace' }
 ];
 
-// Mapping Role ID per Gamemode & Tier
+// Role mapping per Gamemode & Tier
 const TIER_ROLES = {
   'Crystal': {
     HT1: '1500746475448176793', LT1: '1500746484767789096',
@@ -131,17 +132,17 @@ const TIER_ROLES = {
 
 TIER_ROLES['Vanilla'] = TIER_ROLES['Crystal'];
 
-// Mendaftarkan Slash Command langsung dari index.js
+// Register Slash Commands
 async function registerCommands() {
   const commands = [
     new SlashCommandBuilder()
       .setName('testresult')
-      .setDescription('Submit player test result')
-      .addUserOption(opt => opt.setName('player').setDescription('Player Discord').setRequired(true))
-      .addUserOption(opt => opt.setName('tester').setDescription('Tester Discord').setRequired(true))
+      .setDescription('Send a player tier test result')
+      .addUserOption(opt => opt.setName('player').setDescription('The player who was tested').setRequired(true))
+      .addUserOption(opt => opt.setName('tester').setDescription('The tester who conducted the test').setRequired(true))
       .addStringOption(opt => 
         opt.setName('region')
-          .setDescription('Player Region')
+          .setDescription('Region (e.g. NA, EU, AS, AU)')
           .setRequired(true)
           .addChoices(
             { name: 'NA', value: 'NA' },
@@ -151,22 +152,22 @@ async function registerCommands() {
             { name: 'SA', value: 'SA' }
           )
       )
-      .addStringOption(opt => opt.setName('username').setDescription('Minecraft IGN').setRequired(true))
+      .addStringOption(opt => opt.setName('username').setDescription('Minecraft IGN / Username').setRequired(true))
       .addStringOption(opt => 
         opt.setName('gamemode')
-          .setDescription('Select Gamemode')
+          .setDescription('Gamemode / Tier Test')
           .setRequired(true)
           .addChoices(...GAMEMODE_CHOICES)
       )
       .addStringOption(opt => 
         opt.setName('previous_rank')
-          .setDescription('Previous Rank')
+          .setDescription('Previous rank')
           .setRequired(true)
           .addChoices(...RANK_CHOICES)
       )
       .addStringOption(opt => 
         opt.setName('rank_earned')
-          .setDescription('Rank Earned')
+          .setDescription('Rank earned')
           .setRequired(true)
           .addChoices(...RANK_CHOICES)
       ),
@@ -178,19 +179,19 @@ async function registerCommands() {
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
   try {
-    console.log('🔄 Memperbarui Slash Command di Discord API...');
+    console.log('🔄 Updating Slash Commands...');
     await rest.put(
       Routes.applicationCommands(client.user.id),
       { body: commands }
     );
-    console.log('✅ Slash Command berhasil diperbarui!');
+    console.log('✅ Slash Commands registered successfully!');
   } catch (err) {
-    console.error('❌ Gagal update Slash Command:', err);
+    console.error('❌ Failed to update Slash Commands:', err);
   }
 }
 
 client.once('ready', async () => {
-  console.log(`🤖 Bot HollowTiers Online sebagai ${client.user.tag}`);
+  console.log(`🤖 HollowTiers Bot is online as ${client.user.tag}`);
   await registerCommands();
 });
 
@@ -209,18 +210,20 @@ client.on('interactionCreate', async interaction => {
 
     if (interaction.channelId !== COMMAND_CHANNEL_ID) {
       return await interaction.editReply({
-        content: `❌ Command ini hanya dapat digunakan di channel <#${COMMAND_CHANNEL_ID}>!`
+        content: `❌ This command can only be used in <#${COMMAND_CHANNEL_ID}>!`
       }).catch(console.error);
     }
 
     const player = interaction.options.getUser('player');
+    const tester = interaction.options.getUser('tester');
     const region = interaction.options.getString('region');
     const username = interaction.options.getString('username').trim();
     const gamemode = interaction.options.getString('gamemode');
+    const previousRank = interaction.options.getString('previous_rank');
     const rankEarned = interaction.options.getString('rank_earned');
 
     try {
-      // 1. Dapatkan / Buat Data Player di Supabase Database
+      // 1. Database Operations
       const { data: existingPlayers, error: fetchError } = await supabase
         .from('players')
         .select('*')
@@ -246,7 +249,6 @@ client.on('interactionCreate', async interaction => {
           .eq('id', playerDb.id);
       }
 
-      // Format gamemode ID untuk tabel Supabase
       let gamemodeIdFormatted = gamemode.toLowerCase().trim();
       if (gamemodeIdFormatted === 'netherite op') gamemodeIdFormatted = 'nethpot';
       else if (gamemodeIdFormatted === 'pot') gamemodeIdFormatted = 'diapot';
@@ -254,7 +256,6 @@ client.on('interactionCreate', async interaction => {
       else if (gamemodeIdFormatted === 'diamond smp') gamemodeIdFormatted = 'diasmp';
       else if (gamemodeIdFormatted === 'vanilla') gamemodeIdFormatted = 'crystal';
 
-      // 2. Upsert Tier
       const { error: tierError } = await supabase
         .from('player_tiers')
         .upsert(
@@ -268,7 +269,6 @@ client.on('interactionCreate', async interaction => {
 
       if (tierError) throw tierError;
 
-      // 3. Kalkulasi Ulang Total Poin
       const { data: allTiers } = await supabase
         .from('player_tiers')
         .select('tier')
@@ -286,7 +286,7 @@ client.on('interactionCreate', async interaction => {
         .update({ points: totalPoints })
         .eq('id', playerDb.id);
 
-      // 4. Update Role Discord Player
+      // 2. Role Operations
       const member = await interaction.guild.members.fetch(player.id).catch(() => null);
 
       if (member && TIER_ROLES[gamemode]) {
@@ -305,15 +305,30 @@ client.on('interactionCreate', async interaction => {
         }
       }
 
-      // Message balasan langsung dikirim via index.js (Ephemeral / Rahasia)
+      // 3. Formatted English Embed Reply
+      const resultEmbed = new EmbedBuilder()
+        .setTitle('✅ Test Result Processed')
+        .setColor(0x2B2D31)
+        .addFields(
+          { name: '👤 Player', value: `${player} (${username})`, inline: true },
+          { name: '🛡️ Tester', value: `${tester}`, inline: true },
+          { name: '🌍 Region', value: `${region}`, inline: true },
+          { name: '🎮 Gamemode', value: `${gamemode}`, inline: true },
+          { name: '📊 Previous Rank', value: `${previousRank}`, inline: true },
+          { name: '🏆 Rank Earned', value: `${rankEarned}`, inline: true }
+        )
+        .setFooter({ text: 'HollowTiers Database & Roles Updated' })
+        .setTimestamp();
+
       await interaction.editReply({
-        content: `✅ Hasil tes **${username}** (${gamemode} - ${rankEarned}) berhasil disimpan ke Database dan Role Discord telah diperbarui!`
+        content: null,
+        embeds: [resultEmbed]
       }).catch(console.error);
 
     } catch (err) {
       console.error('❌ Error executing command:', err);
       await interaction.editReply({
-        content: `❌ Error: ${err.message || 'Gagal memproses hasil test.'}`
+        content: `❌ Error: ${err.message || 'Failed to process test result.'}`
       }).catch(console.error);
     }
   }
