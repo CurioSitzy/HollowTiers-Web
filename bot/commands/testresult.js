@@ -17,7 +17,22 @@ const RANK_CHOICES = [
     { name: 'HT1', value: 'HT1' },
 ];
 
-// Mapping pilihan gamemode ke ID yang ada di tabel gamemodes Supabase
+// Tabel Nilai Poin per Tier
+const TIER_POINTS = {
+    'HT1': 10,
+    'LT1': 9,
+    'HT2': 8,
+    'LT2': 7,
+    'HT3': 6,
+    'LT3': 5,
+    'HT4': 4,
+    'LT4': 3,
+    'HT5': 2,
+    'LT5': 1,
+    'N/A': 0
+};
+
+// Mapping pilihan gamemode ke ID di tabel gamemodes
 const GAMEMODE_MAPPING = {
     'Sword': 'sword',
     'Axe': 'axe',
@@ -135,10 +150,10 @@ export default {
             }
         }
 
-        // 2. SIMPAN KE DATABASE SUPABASE
+        // 2. SIMPAN KE DATABASE SUPABASE & HITUNG POIN
         if (supabase) {
             try {
-                // A. Simpan/Update Player ke tabel `players` & Ambil UUID (`id`)
+                // A. Simpan/Update Player ke tabel `players`
                 const { data: playerData, error: playerErr } = await supabase
                     .from('players')
                     .upsert([
@@ -158,7 +173,7 @@ export default {
                     const playerId = playerData.id;
                     const mappedGamemodeId = GAMEMODE_MAPPING[gamemode] || gamemode.toLowerCase();
 
-                    // B. Simpan / Upsert ke tabel `player_tiers`
+                    // B. Simpan / Update Tier ke `player_tiers`
                     const { error: tierErr } = await supabase
                         .from('player_tiers')
                         .upsert([
@@ -170,7 +185,36 @@ export default {
                             }
                         ], { onConflict: 'player_id,gamemode_id' });
 
-                    if (tierErr) console.error('❌ Error saving to player_tiers:', tierErr);
+                    if (tierErr) {
+                        console.error('❌ Error saving to player_tiers:', tierErr);
+                    } else {
+                        // C. Hitung Ulang Total Poin Player dari Semua Gamemode yang Dia Punya
+                        const { data: allTiers, error: fetchTiersErr } = await supabase
+                            .from('player_tiers')
+                            .select('tier')
+                            .eq('player_id', playerId);
+
+                        if (!fetchTiersErr && allTiers) {
+                            const totalPoints = allTiers.reduce((sum, item) => {
+                                const pt = TIER_POINTS[item.tier] || 0;
+                                return sum + pt;
+                            }, 0);
+
+                            // Update total poin ke tabel players
+                            const { error: updatePointErr } = await supabase
+                                .from('players')
+                                .update({ points: totalPoints })
+                                .eq('id', playerId);
+
+                            // Jika di DB kamu nama kolom poinnya 'point' (tanpa s), coba cadangan ini jika 'points' error
+                            if (updatePointErr && updatePointErr.code === 'PGRST204') {
+                                await supabase
+                                    .from('players')
+                                    .update({ point: totalPoints })
+                                    .eq('id', playerId);
+                            }
+                        }
+                    }
                 }
             } catch (dbErr) {
                 console.error('❌ Database Exception:', dbErr);
