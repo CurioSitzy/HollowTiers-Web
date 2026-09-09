@@ -16,7 +16,7 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 
 // ID Channels
 const COMMAND_CHANNEL_ID = '1509184085015269516'; // #result-commands
-const PUBLIC_RESULT_CHANNEL_ID = '1500746475448176793'; // ID Channel #results (Sesuaikan ID channel #results lu)
+const PUBLIC_RESULT_CHANNEL_ID = '1500797205382959164'; // ID Channel #results (Sesuaikan ID channel #results lu)
 
 // Points per Tier
 const TIER_POINTS = {
