@@ -16,7 +16,16 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 
 // ID Channels
 const COMMAND_CHANNEL_ID = '1509184085015269516'; // #result-commands
-const PUBLIC_RESULT_CHANNEL_ID = '1500797205382959164'; // ID Channel #results (Sesuaikan ID channel #results lu)
+const OUTPUT_CHANNEL_ID = 'MASUKKAN_ID_CHANNEL_RESULTS_DI_SINI'; // Ganti pakai ID channel #results asli!
+
+// Flag Region Mapping (Ganti ID_EMOJI dengan ID custom emoji server lu)
+const REGION_FLAGS = {
+  'NorthAmerica': '<:NorthAmerica:1546889484635742351>',
+  'Europe': '<:Europe:1546889606786580642>',
+  'Asia': '<:Asia:1546889654286950500>',
+  'Australia': '<:Australia:1546892233016606771>',
+  'SouthAmerica': '<:SouthAmerica:1546889706736849137>'
+};
 
 // Points per Tier
 const TIER_POINTS = {
@@ -143,14 +152,14 @@ async function registerCommands() {
       .addUserOption(opt => opt.setName('tester').setDescription('The tester who conducted the test').setRequired(true))
       .addStringOption(opt => 
         opt.setName('region')
-          .setDescription('Region (e.g. NA, EU, AS, AU)')
+          .setDescription('Region (e.g. NorthAmerica, Europe, Asia, Australia, SouthAmerica)')
           .setRequired(true)
           .addChoices(
-            { name: 'NA', value: 'NA' },
-            { name: 'EU', value: 'EU' },
-            { name: 'AS', value: 'AS' },
-            { name: 'AU', value: 'AU' },
-            { name: 'SA', value: 'SA' }
+            { name: 'NorthAmerica', value: 'NorthAmerica' },
+            { name: 'Europe', value: 'Europe' },
+            { name: 'Asia', value: 'Asia' },
+            { name: 'Australia', value: 'Australia' },
+            { name: 'SouthAmerica', value: 'SouthAmerica' }
           )
       )
       .addStringOption(opt => opt.setName('username').setDescription('Minecraft IGN / Username').setRequired(true))
@@ -306,38 +315,59 @@ client.on('interactionCreate', async interaction => {
         }
       }
 
-      // 3. Kirim Embed Hasil Tes ke Channel Publik #results
-      const resultEmbed = new EmbedBuilder()
-        .setTitle('TEST RESULT')
-        .setColor(0x2B2D31)
+      // 3. SEND EMBED TO OUTPUT CHANNEL
+      const formattedRegion = REGION_FLAGS[region] || `\`${region}\``;
+
+      const embed = new EmbedBuilder()
+        .setColor(0xFF0000)
+        .setAuthor({ 
+          name: `${username}'s Test Results 🏆`, 
+          iconURL: player.displayAvatarURL() 
+        })
         .addFields(
-          { name: 'Player', value: `${player} (${username})`, inline: true },
-          { name: 'Tester', value: `${tester}`, inline: true },
-          { name: 'Region', value: `${region}`, inline: true },
-          { name: 'Gamemode', value: `${gamemode}`, inline: true },
-          { name: 'Previous Rank', value: `${previousRank}`, inline: true },
-          { name: 'Rank Earned', value: `${rankEarned}`, inline: true }
+          { name: 'Player:', value: `<@${player.id}>`, inline: true },
+          { name: 'Tester:', value: `<@${tester.id}>`, inline: true },
+          { name: 'Region:', value: formattedRegion, inline: true },
+          { name: 'Username:', value: `\`${username}\``, inline: true },
+          { name: 'Gamemode:', value: `\`${gamemode}\``, inline: true },
+          { name: 'Previous Rank:', value: `\`${previousRank}\``, inline: true },
+          { name: 'Rank Earned:', value: `\`${rankEarned}\``, inline: true }
         )
+        .setThumbnail(`https://visage.surgeplay.com/bust/512/${username}.png`)
         .setTimestamp();
 
-      const publicChannel = interaction.guild.channels.cache.get(PUBLIC_RESULT_CHANNEL_ID);
-      if (publicChannel) {
-        await publicChannel.send({ embeds: [resultEmbed] });
-      }
+      const targetChannel = await interaction.guild.channels.fetch(OUTPUT_CHANNEL_ID).catch(() => null);
 
-      // 4. Balasan Ephemeral (Rahasia) di #result-commands
-      await interaction.editReply({
-        content: `✅ Test result for **${username}** has been sent to <#${PUBLIC_RESULT_CHANNEL_ID}> and database updated!`
-      }).catch(console.error);
+      if (targetChannel) {
+        const resultMessage = await targetChannel.send({ content: `<@${player.id}>`, embeds: [embed] });
+
+        // 4. AUTO REACTION
+        const emojis = ['🎉', '💀', '😱', '🔥', '🏆'];
+        (async () => {
+          for (const emoji of emojis) {
+            await resultMessage.react(emoji).catch(() => null);
+            await new Promise(res => setTimeout(res, 250));
+          }
+        })();
+
+        await interaction.editReply({
+          content: `✅ Test result for **${username}** has been sent to <#${OUTPUT_CHANNEL_ID}> and saved to Database!`
+        }).catch(console.error);
+      } else {
+        await interaction.editReply({
+          content: `❌ Channel <#${OUTPUT_CHANNEL_ID}> tidak ditemukan! Cek ID channel di \`OUTPUT_CHANNEL_ID\`.`
+        }).catch(console.error);
+      }
 
     } catch (err) {
       console.error('❌ Error executing command:', err);
       await interaction.editReply({
-        content: `❌ Error: ${err.message || 'Failed to process test result.'}`
+        content: `❌ Error: ${err.message || 'Failed to process test result'}`
       }).catch(console.error);
     }
   }
 
+  // --- LOGIKA COMMAND: /setup ---
   if (interaction.commandName === 'setup') {
     await interaction.reply({
       content: '⚙️ Setup command executed successfully!',
