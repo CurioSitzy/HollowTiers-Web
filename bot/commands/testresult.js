@@ -231,7 +231,7 @@ export default {
     async execute(interaction, client, supabase) {
         if (interaction.channelId !== INPUT_CHANNEL_ID) {
             return await interaction.reply({
-                content: `❌ Command ini hanya dapat digunakan di channel <#${INPUT_CHANNEL_ID}>!`,
+                content: `❌ This command can only used in <#${INPUT_CHANNEL_ID}> Channel!`,
                 flags: MessageFlags.Ephemeral
             });
         }
@@ -275,23 +275,23 @@ export default {
                             const targetRole = interaction.guild.roles.cache.get(targetRoleId);
                             if (targetRole) {
                                 await member.roles.add(targetRole);
-                                roleAddedStatus = `\n🎖️ Role **${targetRole.name}** berhasil diberikan!`;
+                                roleAddedStatus = `\n🎖️ Role **${targetRole.name}** has been Gived!`;
                                 if (removedRoleName) {
                                     roleAddedStatus += ` (Role **${removedRoleName}** lama dicopot)`;
                                 }
                             } else {
-                                roleAddedStatus = `\n⚠️ Role ID terdaftar tetapi role tidak ditemukan di server!`;
+                                roleAddedStatus = `\n⚠️ Role ID registered but role doesn't exist on server!`;
                             }
                         } else {
-                            roleAddedStatus = `\n⚠️ ID Role untuk **${rankEarned} ${gamemode}** belum terdaftar di bot!`;
+                            roleAddedStatus = `\n⚠️ ID Role for **${rankEarned} ${gamemode}** is not exist on bot!`;
                         }
                     } else {
-                        roleAddedStatus = `\nℹ️ Rank diset ke N/A${removedRoleName ? ` (Role **${removedRoleName}** berhasil dicopot)` : ''}.`;
+                        roleAddedStatus = `\nℹ️ Rank set to N/A${removedRoleName ? ` (Role **${removedRoleName}** Succesfully Removed)` : ''}.`;
                     }
                 }
             } catch (roleErr) {
                 console.error('❌ Error updating roles:', roleErr);
-                roleAddedStatus = `\n❌ Gagal memperbarui role (Pastikan posisi role bot di Server Settings berada di ATAS role tier).`;
+                roleAddedStatus = `\n❌ Failed Updating role (Make sure bot Position in Server Settings is above role tier).`;
             }
         }
 
@@ -394,7 +394,7 @@ export default {
         }
 
         return await interaction.editReply({
-            content: `✅ Test result berhasil tersimpan dan dikirim ke <#${OUTPUT_CHANNEL_ID}>!${roleAddedStatus}`
+            content: `✅ Test result has been saved and sent to <#${OUTPUT_CHANNEL_ID}>!${roleAddedStatus}`
         });
     }
 };
