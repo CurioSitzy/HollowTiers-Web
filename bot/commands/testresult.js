@@ -91,24 +91,52 @@ export default {
         const previousRank = interaction.options.getString('previous_rank');
         const rankEarned = interaction.options.getString('rank_earned');
 
-        // 1. Simpan/Update Data ke Tabel `players` & `player_tiers`
+        // 1. AUTO ADD DISCORD ROLE
+        let roleAddedStatus = '';
+        if (interaction.guild && rankEarned !== 'N/A') {
+            try {
+                const member = await interaction.guild.members.fetch(player.id).catch(() => null);
+                if (member) {
+                    const targetRole = interaction.guild.roles.cache.find(role => {
+                        const name = role.name.toLowerCase();
+                        const rankStr = rankEarned.toLowerCase();
+                        const modeStr = gamemode.toLowerCase();
+
+                        return (
+                            name === `${rankStr} ${modeStr}` ||
+                            name === `${modeStr} ${rankStr}` ||
+                            name === `${rankStr}-${modeStr}` ||
+                            name === rankStr
+                        );
+                    });
+
+                    if (targetRole) {
+                        await member.roles.add(targetRole);
+                        roleAddedStatus = `\n🎖️ Role **${targetRole.name}** berhasil diberikan!`;
+                    }
+                }
+            } catch (roleErr) {
+                console.error('❌ Error giving role:', roleErr);
+            }
+        }
+
+        // 2. SIMPAN KE DATABASE SUPABASE
         if (supabase) {
             try {
-                // A. Pastikan Player Terdaftar di tabel `players`
-                const { data: playerData, error: playerErr } = await supabase
+                // A. Simpan ke tabel `players` (Hanya menyertakan kolom standard yang pasti ada)
+                const { error: playerErr } = await supabase
                     .from('players')
                     .upsert([
                         {
                             discord_id: player.id,
-                            username: username,
                             region: region
+                            // Jika di DB kamu nama kolomnya 'ign' atau 'name' bukan 'username', sesuaikan di sini
                         }
-                    ], { onConflict: 'discord_id' })
-                    .select();
+                    ], { onConflict: 'discord_id' });
 
                 if (playerErr) console.error('❌ Error saving to players:', playerErr);
 
-                // B. Simpan Tier Hasil Tes ke tabel `player_tiers`
+                // B. Simpan ke tabel `player_tiers`
                 const { error: tierErr } = await supabase
                     .from('player_tiers')
                     .insert([
@@ -119,8 +147,8 @@ export default {
                             previous_rank: previousRank,
                             rank_earned: rankEarned,
                             tester_id: tester.id,
-                            region: region,
-                            created_at: new Date()
+                            region: region
+                            // Kolom created_at sengaja dihapus agar diisi otomatis oleh default timestamp Supabase
                         }
                     ]);
 
@@ -130,10 +158,9 @@ export default {
             }
         }
 
-        // 2. Render Avatar 3D
+        // 3. RENDER AVATAR 3D & EMBED
         const minecraftAvatarUrl = `https://visage.surgeplay.com/bust/512/${username}`;
 
-        // 3. Susun Embed
         const embed = new EmbedBuilder()
             .setAuthor({ 
                 name: `${username}'s Test Results`, 
@@ -150,7 +177,7 @@ export default {
                 { name: 'Gamemode:', value: `\`${gamemode}\``, inline: false }
             );
 
-        // 4. Kirim Ke Output Channel
+        // 4. KIRIM KE OUTPUT CHANNEL
         try {
             const outputChannel = await client.channels.fetch(OUTPUT_CHANNEL_ID);
             if (outputChannel) {
@@ -164,7 +191,7 @@ export default {
         }
 
         return await interaction.editReply({
-            content: `✅ Test result berhasil tersimpan di database dan dikirim ke <#${OUTPUT_CHANNEL_ID}>!`
+            content: `✅ Test result berhasil tersimpan dan dikirim ke <#${OUTPUT_CHANNEL_ID}>!${roleAddedStatus}`
         });
     }
 };
