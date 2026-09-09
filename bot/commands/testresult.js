@@ -78,7 +78,7 @@ export default {
         // Cek apakah perintah diketik di channel input yang benar
         if (interaction.channelId !== INPUT_CHANNEL_ID) {
             return await interaction.reply({
-                content: `❌ Command ini hanya dapat digunakan di channel <#${INPUT_CHANNEL_ID}>!`,
+                content: `❌ This command can only be used in <#${INPUT_CHANNEL_ID}> Channel!`,
                 flags: MessageFlags.Ephemeral
             });
         }
@@ -146,13 +146,13 @@ export default {
         } catch (chanErr) {
             console.error('Gagal mengirim ke output channel:', chanErr);
             return await interaction.editReply({
-                content: `❌ Gagal mengirim hasil ke output channel. Pastikan ID Channel benar!`
+                content: `❌ Failed sending to output channel!`
             });
         }
 
         // 5. Konfirmasi ke pemakai command di #result-commands
         return await interaction.editReply({
-            content: `✅ Test result berhasil dikirim ke <#${OUTPUT_CHANNEL_ID}> dan disimpan ke database!`
+            content: `✅ Test result has been sent to <#${OUTPUT_CHANNEL_ID}> and saved to the database!`
         });
     }
 };
