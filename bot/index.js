@@ -14,8 +14,9 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 
-// Channel ID
+// ID Channels
 const COMMAND_CHANNEL_ID = '1509184085015269516'; // #result-commands
+const PUBLIC_RESULT_CHANNEL_ID = '1500746475448176793'; // ID Channel #results (Sesuaikan ID channel #results lu)
 
 // Points per Tier
 const TIER_POINTS = {
@@ -223,7 +224,7 @@ client.on('interactionCreate', async interaction => {
     const rankEarned = interaction.options.getString('rank_earned');
 
     try {
-      // 1. Database Operations
+      // 1. Supabase Operations
       const { data: existingPlayers, error: fetchError } = await supabase
         .from('players')
         .select('*')
@@ -286,7 +287,7 @@ client.on('interactionCreate', async interaction => {
         .update({ points: totalPoints })
         .eq('id', playerDb.id);
 
-      // 2. Role Operations
+      // 2. Discord Roles Operations
       const member = await interaction.guild.members.fetch(player.id).catch(() => null);
 
       if (member && TIER_ROLES[gamemode]) {
@@ -305,24 +306,28 @@ client.on('interactionCreate', async interaction => {
         }
       }
 
-      // 3. Formatted English Embed Reply
+      // 3. Kirim Embed Hasil Tes ke Channel Publik #results
       const resultEmbed = new EmbedBuilder()
-        .setTitle('✅ Test Result Processed')
+        .setTitle('TEST RESULT')
         .setColor(0x2B2D31)
         .addFields(
-          { name: '👤 Player', value: `${player} (${username})`, inline: true },
-          { name: '🛡️ Tester', value: `${tester}`, inline: true },
-          { name: '🌍 Region', value: `${region}`, inline: true },
-          { name: '🎮 Gamemode', value: `${gamemode}`, inline: true },
-          { name: '📊 Previous Rank', value: `${previousRank}`, inline: true },
-          { name: '🏆 Rank Earned', value: `${rankEarned}`, inline: true }
+          { name: 'Player', value: `${player} (${username})`, inline: true },
+          { name: 'Tester', value: `${tester}`, inline: true },
+          { name: 'Region', value: `${region}`, inline: true },
+          { name: 'Gamemode', value: `${gamemode}`, inline: true },
+          { name: 'Previous Rank', value: `${previousRank}`, inline: true },
+          { name: 'Rank Earned', value: `${rankEarned}`, inline: true }
         )
-        .setFooter({ text: 'HollowTiers Database & Roles Updated' })
         .setTimestamp();
 
+      const publicChannel = interaction.guild.channels.cache.get(PUBLIC_RESULT_CHANNEL_ID);
+      if (publicChannel) {
+        await publicChannel.send({ embeds: [resultEmbed] });
+      }
+
+      // 4. Balasan Ephemeral (Rahasia) di #result-commands
       await interaction.editReply({
-        content: null,
-        embeds: [resultEmbed]
+        content: `✅ Test result for **${username}** has been sent to <#${PUBLIC_RESULT_CHANNEL_ID}> and database updated!`
       }).catch(console.error);
 
     } catch (err) {
