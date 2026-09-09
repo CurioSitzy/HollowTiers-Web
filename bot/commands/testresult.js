@@ -123,14 +123,15 @@ export default {
         // 2. SIMPAN KE DATABASE SUPABASE
         if (supabase) {
             try {
-                // A. Simpan ke tabel `players` (Sertakan `ign` dan `username` agar aman)
+                // A. Simpan ke tabel `players` (Diisi kolom `type` agar tidak melewatkan constraint)
                 const { error: playerErr } = await supabase
                     .from('players')
                     .upsert([
                         {
                             discord_id: player.id,
-                            ign: username,       // Memenuhi not-null constraint kolom 'ign'
-                            region: region
+                            ign: username,
+                            region: region,
+                            type: 'player' // Mengatasi error null value in column "type"
                         }
                     ], { onConflict: 'discord_id' });
 
@@ -142,7 +143,6 @@ export default {
                     .insert([
                         {
                             player_id: player.id,
-                            previous_rank: previousRank,
                             rank_earned: rankEarned,
                             tester_id: tester.id,
                             region: region
