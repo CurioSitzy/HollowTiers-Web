@@ -123,7 +123,7 @@ export default {
         // 2. SIMPAN KE DATABASE SUPABASE
         if (supabase) {
             try {
-                // A. Simpan ke tabel `players` (Diisi kolom `type` agar tidak melewatkan constraint)
+                // A. Upsert ke tabel `players` dengan memprioritaskan Unique Key 'ign'
                 const { error: playerErr } = await supabase
                     .from('players')
                     .upsert([
@@ -131,19 +131,20 @@ export default {
                             discord_id: player.id,
                             ign: username,
                             region: region,
-                            type: 'player' // Mengatasi error null value in column "type"
+                            type: 'player'
                         }
-                    ], { onConflict: 'discord_id' });
+                    ], { onConflict: 'ign' });
 
                 if (playerErr) console.error('❌ Error saving to players:', playerErr);
 
-                // B. Simpan ke tabel `player_tiers`
+                // B. Simpan ke tabel `player_tiers` (Gunakan 'tier' atau 'rank' sesuai schema Supabase)
                 const { error: tierErr } = await supabase
                     .from('player_tiers')
                     .insert([
                         {
                             player_id: player.id,
-                            rank_earned: rankEarned,
+                            tier: rankEarned,       // Menggunakan kolom 'tier'
+                            rank: rankEarned,       // Backup jika di DB bernama 'rank'
                             tester_id: tester.id,
                             region: region
                         }
