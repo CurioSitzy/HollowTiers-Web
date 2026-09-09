@@ -1,8 +1,7 @@
 import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
 
-// ID Channel Input & Output
 const INPUT_CHANNEL_ID = '1509184085015269516'; // Channel #result-commands
-const OUTPUT_CHANNEL_ID = '1500797205382959164'; // Ganti dengan ID Channel Output jika beda
+const OUTPUT_CHANNEL_ID = '1500797205382959164'; // ID Channel Output Embed
 
 const RANK_CHOICES = [
     { name: 'N/A', value: 'N/A' },
@@ -36,11 +35,11 @@ export default {
                 .setDescription('Region')
                 .setRequired(true)
                 .addChoices(
-                    { name: 'NorthAmerica (NA)', value: 'NorthAmerica [NA]' },
-                    { name: 'Europe (EU)', value: 'Europe [EU]' },
-                    { name: 'Asia (AS)', value: 'Asia [AS]' },
-                    { name: 'Australia (AU)', value: 'Australia [AU]' },
-                    { name: 'SouthAmerica (SA)', value: 'SouthAmerica [SA]' }
+                    { name: 'NorthAmerica (NA)', value: 'NA' },
+                    { name: 'Europe (EU)', value: 'EU' },
+                    { name: 'Asia (AS)', value: 'AS' },
+                    { name: 'Australia (AU)', value: 'AU' },
+                    { name: 'SouthAmerica (SA)', value: 'SA' }
                 ))
         .addStringOption(option => 
             option.setName('username')
@@ -92,24 +91,40 @@ export default {
         const previousRank = interaction.options.getString('previous_rank');
         const rankEarned = interaction.options.getString('rank_earned');
 
-        // 1. Simpan SEMUA Field Lengkap ke Supabase Database
+        // 1. Simpan/Update Data ke Tabel `players` & `player_tiers`
         if (supabase) {
             try {
-                const { error } = await supabase.from('test_results').insert([
-                    {
-                        player_discord_id: player.id,
-                        tester_discord_id: tester.id,
-                        region: region,
-                        minecraft_username: username,
-                        gamemode: gamemode,
-                        previous_rank: previousRank,
-                        rank_earned: rankEarned, // Rank/Tier tersimpan di kolom khusus ini
-                        tier: rankEarned,       // Backup jika di DB kamu nama kolomnya 'tier'
-                        created_at: new Date()
-                    }
-                ]);
+                // A. Pastikan Player Terdaftar di tabel `players`
+                const { data: playerData, error: playerErr } = await supabase
+                    .from('players')
+                    .upsert([
+                        {
+                            discord_id: player.id,
+                            username: username,
+                            region: region
+                        }
+                    ], { onConflict: 'discord_id' })
+                    .select();
 
-                if (error) console.error('❌ Supabase Insert Error:', error);
+                if (playerErr) console.error('❌ Error saving to players:', playerErr);
+
+                // B. Simpan Tier Hasil Tes ke tabel `player_tiers`
+                const { error: tierErr } = await supabase
+                    .from('player_tiers')
+                    .insert([
+                        {
+                            player_id: player.id,
+                            username: username,
+                            gamemode: gamemode,
+                            previous_rank: previousRank,
+                            rank_earned: rankEarned,
+                            tester_id: tester.id,
+                            region: region,
+                            created_at: new Date()
+                        }
+                    ]);
+
+                if (tierErr) console.error('❌ Error saving to player_tiers:', tierErr);
             } catch (dbErr) {
                 console.error('❌ Database Exception:', dbErr);
             }
@@ -118,7 +133,7 @@ export default {
         // 2. Render Avatar 3D
         const minecraftAvatarUrl = `https://visage.surgeplay.com/bust/512/${username}`;
 
-        // 3. Embed Display
+        // 3. Susun Embed
         const embed = new EmbedBuilder()
             .setAuthor({ 
                 name: `${username}'s Test Results`, 
@@ -135,7 +150,7 @@ export default {
                 { name: 'Gamemode:', value: `\`${gamemode}\``, inline: false }
             );
 
-        // 4. Send Embed ke Channel Output
+        // 4. Kirim Ke Output Channel
         try {
             const outputChannel = await client.channels.fetch(OUTPUT_CHANNEL_ID);
             if (outputChannel) {
