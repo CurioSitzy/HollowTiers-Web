@@ -1,9 +1,9 @@
-import { SlashCommandBuilder, ChannelType, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, ChannelType, PermissionFlagsBits, MessageFlags } from 'discord.js';
 
 // ID Role Tester di Server Discord
 const TESTER_ROLE_IDS = [
-  '1502537249131335710', // Contoh ID Role Tester (Ganti sesuai ID Role asli di servermu)
-  '1500479159485595722', // Contoh ID Role Verified Tester
+  '1502537249131335710', // Role Tester
+  '1500479159485595722', // Role Verified Tester
 ];
 
 export default {
@@ -12,7 +12,8 @@ export default {
     .setDescription('Pull the top player from the waitlist and create a testing ticket'),
 
   async execute(interaction, client, supabase) {
-    await interaction.deferReply({ ephemeral: true });
+    // Gunakan MessageFlags.Ephemeral untuk standar Discord.js v14+
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     // ==========================================
     // 1. PENGECEKAN ROLE TESTER / VERIFIED TESTER
@@ -20,7 +21,6 @@ export default {
     const member = interaction.member;
     const hasTesterRole = TESTER_ROLE_IDS.some(roleId => member.roles.cache.has(roleId));
 
-    // Jika user TIDAK punya role tester DAN bukan Administrator
     if (!hasTesterRole && !member.permissions.has(PermissionFlagsBits.Administrator)) {
       return interaction.editReply({
         content: '❌ **Akses Ditolak!** Hanya **Tester** dan **Verified Tester** yang dapat menggunakan command ini.'
@@ -109,6 +109,11 @@ export default {
           }
         ]
       });
+
+      // Register Ticket ke Waitlist Service Lokal (jika ada)
+      if (global.waitlistService && typeof global.waitlistService.registerTicket === 'function') {
+        global.waitlistService.registerTicket(ticketChannel.id, player, interaction.user.id);
+      }
 
       // ==========================================
       // 5. CATAT KE SUPABASE & KIRIM PESAN
