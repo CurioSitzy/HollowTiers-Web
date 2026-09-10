@@ -1,9 +1,12 @@
 import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
 
-const INPUT_CHANNEL_ID = '1509184085015269516'; // #result-commands channel
-const OUTPUT_CHANNEL_ID = '1500797205382959164'; // Output channel for the embed result
 
-// Rank choices ordered from highest (HT1) to lowest (LT5)
+const INPUT_CHANNEL_ID = '1509184085015269516'; // Channel #result-commands
+const OUTPUT_CHANNEL_ID = '1500797205382959164'; // Channel Output Embed
+
+
+
+// Pilihan Tier berurutan dari Tertinggi (HT1) ke Terendah (LT5)
 const RANK_CHOICES = [
     { name: 'HT1', value: 'HT1' },
     { name: 'LT1', value: 'LT1' },
@@ -17,6 +20,7 @@ const RANK_CHOICES = [
     { name: 'LT5', value: 'LT5' },
     { name: 'N/A', value: 'N/A' },
 ];
+
 
 // MCTiers Point System
 const TIER_POINTS = {
@@ -33,7 +37,8 @@ const TIER_POINTS = {
     'N/A': 0
 };
 
-// Gamemode Mapping to Supabase IDs
+
+// Mapping Gamemode ke ID Supabase
 const GAMEMODE_MAPPING = {
     'Sword': 'sword',
     'Axe': 'axe',
@@ -47,8 +52,9 @@ const GAMEMODE_MAPPING = {
     'Spear Mace': 'spearmace'
 };
 
+
 // =========================================================
-// 📌 DISCORD ROLE IDS MAPPING (HT1 -> LT5)
+// 📌 DAFTAR ID ROLE DISCORD LENGKAP (HT1 -> LT5)
 // Format Key: "GAMEMODE_TIER"
 // =========================================================
 const ROLE_IDS = {
@@ -64,6 +70,7 @@ const ROLE_IDS = {
     'Sword_HT5': '1500753809662804049',
     'Sword_LT5': '1500753017534939199',
 
+
     // 2. Axe
     'Axe_HT1': '1502310374140022994',
     'Axe_LT1': '1502310389222871140',
@@ -75,6 +82,7 @@ const ROLE_IDS = {
     'Axe_LT4': '1502310386907615252',
     'Axe_HT5': '1502310386072944751',
     'Axe_LT5': '1502310386274275498',
+
 
     // 3. Vanilla / Crystal
     'Vanilla_HT1': '1500746475448176793',
@@ -88,6 +96,7 @@ const ROLE_IDS = {
     'Vanilla_HT5': '1500746483845173308',
     'Vanilla_LT5': '1500746487368384572',
 
+
     // 4. SMP
     'SMP_HT1': '1502540937367257109',
     'SMP_LT1': '1502540933768679485',
@@ -99,6 +108,7 @@ const ROLE_IDS = {
     'SMP_LT4': '1502540935819563178',
     'SMP_HT5': '1502540941582667786',
     'SMP_LT5': '1502540936385794179',
+
 
     // 5. Diamond SMP
     'Diamond SMP_HT1': '1500755032478322759',
@@ -112,6 +122,7 @@ const ROLE_IDS = {
     'Diamond SMP_HT5': '1500755027587764325',
     'Diamond SMP_LT5': '1500480104046919711',
 
+
     // 6. Pot
     'Pot_HT1': '1502312007460847616',
     'Pot_LT1': '1502311997591781516',
@@ -123,6 +134,7 @@ const ROLE_IDS = {
     'Pot_LT4': '1502312005883793489',
     'Pot_HT5': '1502540238587953252',
     'Pot_LT5': '1502312006458540162',
+
 
     // 7. UHC
     'UHC_HT1': '1502310022292574448',
@@ -136,6 +148,7 @@ const ROLE_IDS = {
     'UHC_HT5': '1502310139074576446',
     'UHC_LT5': '1500756923627208704',
 
+
     // 8. Netherite OP
     'Netherite OP_HT1': '1500756916358479933',
     'Netherite OP_LT1': '1500746484327383120',
@@ -148,6 +161,7 @@ const ROLE_IDS = {
     'Netherite OP_HT5': '1500756919428841532',
     'Netherite OP_LT5': '1500756915959889970',
 
+
     // 9. Cart
     'Cart_HT1': '1507231753352253440',
     'Cart_LT1': '1507231761698918560',
@@ -159,6 +173,7 @@ const ROLE_IDS = {
     'Cart_LT4': '1507231763615846493',
     'Cart_HT5': '1507231760809726133',
     'Cart_LT5': '1507231904242598038',
+
 
     // 10. Spear Mace
     'Spear Mace_HT1': '1507226546350592110',
@@ -173,11 +188,12 @@ const ROLE_IDS = {
     'Spear Mace_LT5': '1507226568857227395'
 };
 
+
 export default {
     category: 'Tiers',
     data: new SlashCommandBuilder()
         .setName('testresult')
-        .setDescription('Submit a player tier testing result')
+        .setDescription('Send a player tier test result')
         .addUserOption(option => 
             option.setName('player')
                 .setDescription('The player who was tested')
@@ -188,22 +204,23 @@ export default {
                 .setRequired(true))
         .addStringOption(option => 
             option.setName('region')
-                .setDescription('Player region')
+                .setDescription('Region')
                 .setRequired(true)
                 .addChoices(
-                    { name: 'North America (NA)', value: 'NA' },
+                    { name: 'NorthAmerica (NA)', value: 'NA' },
                     { name: 'Europe (EU)', value: 'EU' },
                     { name: 'Asia (AS)', value: 'AS' },
                     { name: 'Australia (AU)', value: 'AU' },
-                    { name: 'South America (SA)', value: 'SA' }
+                    { name: 'SouthAmerica (SA)', value: 'SA' }
                 ))
+
         .addStringOption(option => 
             option.setName('username')
                 .setDescription('Minecraft IGN / Username')
                 .setRequired(true))
         .addStringOption(option => 
             option.setName('gamemode')
-                .setDescription('Gamemode tested')
+                .setDescription('Gamemode / Tier Test')
                 .setRequired(true)
                 .addChoices(
                     { name: 'Sword', value: 'Sword' },
@@ -217,26 +234,28 @@ export default {
                     { name: 'Cart', value: 'Cart' },
                     { name: 'Spear Mace', value: 'Spear Mace' }
                 ))
+
         .addStringOption(option => 
             option.setName('previous_rank')
-                .setDescription('Previous rank of the player')
+                .setDescription('Previous rank')
                 .setRequired(true)
                 .addChoices(...RANK_CHOICES))
         .addStringOption(option => 
             option.setName('rank_earned')
-                .setDescription('New rank earned')
+                .setDescription('Rank earned')
                 .setRequired(true)
                 .addChoices(...RANK_CHOICES)),
 
     async execute(interaction, client, supabase) {
         if (interaction.channelId !== INPUT_CHANNEL_ID) {
             return await interaction.reply({
-                content: `❌ This command can only be used in <#${INPUT_CHANNEL_ID}>!`,
+                content: `❌ This command can only used in <#${INPUT_CHANNEL_ID}> Channel!`,
                 flags: MessageFlags.Ephemeral
             });
         }
 
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
 
         const player = interaction.options.getUser('player');
         const tester = interaction.options.getUser('tester');
@@ -246,59 +265,63 @@ export default {
         const previousRank = interaction.options.getString('previous_rank');
         const rankEarned = interaction.options.getString('rank_earned');
 
-        // 1. DISCORD ROLE MANAGEMENT (Remove existing gamemode roles & Assign new role)
+
+        // 1. AUTO UPDATE DISCORD ROLE (PENSOPOTAN ROLE LAMA & PENAMBAHAN ROLE BARU)
         let roleAddedStatus = '';
         if (interaction.guild) {
             try {
                 const member = await interaction.guild.members.fetch(player.id).catch(() => null);
                 if (member) {
-                    let removedRoles = [];
-                    
-                    // Filter all Role IDs for this gamemode
-                    const gamemodeRoleIds = Object.keys(ROLE_IDS)
-                        .filter(key => key.startsWith(`${gamemode}_`))
-                        .map(key => ROLE_IDS[key]);
+                    let removedRoleName = '';
 
-                    // Remove existing gamemode tier roles from the player
-                    for (const roleId of gamemodeRoleIds) {
-                        if (member.roles.cache.has(roleId)) {
-                            const r = interaction.guild.roles.cache.get(roleId);
-                            await member.roles.remove(roleId).catch(() => null);
-                            if (r) removedRoles.push(r.name);
+                    
+                    // Mencopot role tier lama dari gamemode yang sama jika sebelumnya ada rank
+                    if (previousRank !== 'N/A') {
+                        const prevRoleKey = `${gamemode}_${previousRank}`;
+                        const prevRoleId = ROLE_IDS[prevRoleKey];
+                        
+
+                        if (prevRoleId && member.roles.cache.has(prevRoleId)) {
+                            const prevRole = interaction.guild.roles.cache.get(prevRoleId);
+                            await member.roles.remove(prevRoleId).catch(() => null);
+                            if (prevRole) removedRoleName = prevRole.name;
                         }
                     }
 
-                    // Assign new role if rankEarned is not N/A
+                    // Menambahkan role tier baru jika bukan N/A
                     if (rankEarned !== 'N/A') {
-                        const targetRoleId = ROLE_IDS[`${gamemode}_${rankEarned}`];
+                        const roleKey = `${gamemode}_${rankEarned}`;
+                        const targetRoleId = ROLE_IDS[roleKey];
+
+
                         if (targetRoleId) {
                             const targetRole = interaction.guild.roles.cache.get(targetRoleId);
                             if (targetRole) {
                                 await member.roles.add(targetRole);
-                                roleAddedStatus = `\n🎖️ Role **${targetRole.name}** assigned successfully!`;
-                                if (removedRoles.length > 0) {
-                                    roleAddedStatus += ` (Removed old roles: **${removedRoles.join(', ')}**)`;
+                                roleAddedStatus = `\n🎖️ Role **${targetRole.name}** has been Gived!`;
+                                if (removedRoleName) {
+                                    roleAddedStatus += ` (Role **${removedRoleName}** lama dicopot)`;
                                 }
                             } else {
-                                roleAddedStatus = `\n⚠️ Role ID exists, but the role was not found in the guild!`;
+                                roleAddedStatus = `\n⚠️ Role ID registered but role doesn't exist on server!`;
                             }
                         } else {
-                            roleAddedStatus = `\n⚠️ Role ID for **${gamemode} ${rankEarned}** is not registered!`;
+                            roleAddedStatus = `\n⚠️ ID Role for **${rankEarned} ${gamemode}** is not exist on bot!`;
                         }
                     } else {
-                        roleAddedStatus = `\nℹ️ Rank set to N/A${removedRoles.length > 0 ? ` (Removed: **${removedRoles.join(', ')}**)` : ''}.`;
+                        roleAddedStatus = `\nℹ️ Rank set to N/A${removedRoleName ? ` (Role **${removedRoleName}** Succesfully Removed)` : ''}.`;
                     }
                 }
             } catch (roleErr) {
                 console.error('❌ Error updating roles:', roleErr);
-                roleAddedStatus = `\n❌ Failed to update roles (Ensure bot hierarchy is higher than tier roles).`;
+                roleAddedStatus = `\n❌ Failed Updating role (Make sure bot Position in Server Settings is above role tier).`;
             }
         }
 
-        // 2. SUPABASE INTEGRATION & RECALCULATE POINTS
+
+        // 2. SIMPAN KE DATABASE SUPABASE & HITUNG POIN
         if (supabase) {
             try {
-                // Upsert player record
                 const { data: playerData, error: playerErr } = await supabase
                     .from('players')
                     .upsert([
@@ -312,13 +335,14 @@ export default {
                     .select('id')
                     .single();
 
+
                 if (playerErr) {
-                    console.error('❌ Error saving to players table:', playerErr);
+                    console.error('❌ Error saving to players:', playerErr);
                 } else if (playerData) {
                     const playerId = playerData.id;
                     const mappedGamemodeId = GAMEMODE_MAPPING[gamemode] || gamemode.toLowerCase();
 
-                    // Upsert tier record
+
                     const { error: tierErr } = await supabase
                         .from('player_tiers')
                         .upsert([
@@ -330,22 +354,28 @@ export default {
                             }
                         ], { onConflict: 'player_id,gamemode_id' });
 
+
                     if (tierErr) {
-                        console.error('❌ Error saving to player_tiers table:', tierErr);
+                        console.error('❌ Error saving to player_tiers:', tierErr);
                     } else {
-                        // Recalculate total points
+                        // Hitung ulang total poin player
                         const { data: allTiers, error: fetchTiersErr } = await supabase
                             .from('player_tiers')
                             .select('tier')
                             .eq('player_id', playerId);
 
+
                         if (!fetchTiersErr && allTiers) {
-                            const totalPoints = allTiers.reduce((sum, item) => sum + (TIER_POINTS[item.tier] || 0), 0);
+                            const totalPoints  allTiers.reduce((sum, item) => {
+                                return sum + (TIER_POINTS[item.tier] || 0);
+                            }, 0);
+
 
                             const { error: updatePointErr } = await supabase
                                 .from('players')
                                 .update({ points: totalPoints })
                                 .eq('id', playerId);
+
 
                             if (updatePointErr && updatePointErr.code === 'PGRST204') {
                                 await supabase
@@ -361,44 +391,45 @@ export default {
             }
         }
 
-        // 3. BUILD EMBED (HllowTier Style)
+
+        // 3. RENDER AVATAR 3D & EMBED
         const minecraftAvatarUrl = `https://visage.surgeplay.com/bust/512/${username}`;
+
 
         const embed = new EmbedBuilder()
             .setAuthor({ 
-                name: `${username}'s Tier Test Result`, 
-                iconURL: player.displayAvatarURL({ forceStatic: false }) 
+                name: `${username}'s Test Results`, 
+                iconURL: player.displayAvatarURL({ dynamic: true }) 
             })
-            .setColor('#2F3136')
+            .setColor('#D00000')
             .setThumbnail(minecraftAvatarUrl)
             .addFields(
-                { name: 'Tester', value: `<@${tester.id}>`, inline: false },
-                { name: 'Region', value: `\`${region}\``, inline: false },
-                { name: 'Username', value: `\`${username}\``, inline: false },
-                { name: 'Previous Rank', value: `\`${previousRank}\``, inline: false },
-                { name: 'Rank Earned', value: `\`${rankEarned}\``, inline: false },
-                { name: 'Gamemode', value: `\`${gamemode}\``, inline: false }
-            )
-            .setFooter({ text: 'Tier Test System', iconURL: client.user.displayAvatarURL() })
-            .setTimestamp();
+                { name: 'Tester:', value: `<@${tester.id}>`, inline: false },
+                { name: 'Region:', value: `\`${region}\``, inline: false },
+                { name: 'Username:', value: `\`${username}\``, inline: false },
+                { name: 'Previous Rank:', value: `\`${previousRank}\``, inline: false },
+                { name: 'Rank Earned:', value: `\`${rankEarned}\``, inline: false },
+                { name: 'Gamemode:', value: `\`${gamemode}\``, inline: false }
+            );
 
-        // 4. SEND TO OUTPUT CHANNEL
+
+        // 4. KIRIM KE OUTPUT CHANNEL
         try {
             const outputChannel = await client.channels.fetch(OUTPUT_CHANNEL_ID);
-            if (outputChannel && outputChannel.isTextBased()) {
+            if (outputChannel) {
                 await outputChannel.send({
                     content: `<@${player.id}> [${region}]`,
                     embeds: [embed]
                 });
-            } else {
-                console.error('❌ Output channel not found or is not a text channel.');
             }
         } catch (chanErr) {
-            console.error('❌ Failed to send embed to output channel:', chanErr);
+            console.error('Gagal mengirim ke channel output:', chanErr);
         }
 
+
         return await interaction.editReply({
-            content: `✅ Test result successfully submitted and sent to <#${OUTPUT_CHANNEL_ID}>!${roleAddedStatus}`
+            content: `✅ Test result has been saved and sent to <#${OUTPUT_CHANNEL_ID}>!${roleAddedStatus}`
         });
     }
 };
+
