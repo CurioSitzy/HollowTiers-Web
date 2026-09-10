@@ -1,10 +1,7 @@
 import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
 
-
 const INPUT_CHANNEL_ID = '1509184085015269516'; // Channel #result-commands
 const OUTPUT_CHANNEL_ID = '1500797205382959164'; // Channel Output Embed
-
-
 
 // Pilihan Tier berurutan dari Tertinggi (HT1) ke Terendah (LT5)
 const RANK_CHOICES = [
@@ -21,7 +18,6 @@ const RANK_CHOICES = [
     { name: 'N/A', value: 'N/A' },
 ];
 
-
 // MCTiers Point System
 const TIER_POINTS = {
     'HT1': 60,
@@ -37,7 +33,6 @@ const TIER_POINTS = {
     'N/A': 0
 };
 
-
 // Mapping Gamemode ke ID Supabase
 const GAMEMODE_MAPPING = {
     'Sword': 'sword',
@@ -51,7 +46,6 @@ const GAMEMODE_MAPPING = {
     'Cart': 'cart',
     'Spear Mace': 'spearmace'
 };
-
 
 // =========================================================
 // 📌 DAFTAR ID ROLE DISCORD LENGKAP (HT1 -> LT5)
@@ -70,7 +64,6 @@ const ROLE_IDS = {
     'Sword_HT5': '1500753809662804049',
     'Sword_LT5': '1500753017534939199',
 
-
     // 2. Axe
     'Axe_HT1': '1502310374140022994',
     'Axe_LT1': '1502310389222871140',
@@ -82,7 +75,6 @@ const ROLE_IDS = {
     'Axe_LT4': '1502310386907615252',
     'Axe_HT5': '1502310386072944751',
     'Axe_LT5': '1502310386274275498',
-
 
     // 3. Vanilla / Crystal
     'Vanilla_HT1': '1500746475448176793',
@@ -96,7 +88,6 @@ const ROLE_IDS = {
     'Vanilla_HT5': '1500746483845173308',
     'Vanilla_LT5': '1500746487368384572',
 
-
     // 4. SMP
     'SMP_HT1': '1502540937367257109',
     'SMP_LT1': '1502540933768679485',
@@ -108,7 +99,6 @@ const ROLE_IDS = {
     'SMP_LT4': '1502540935819563178',
     'SMP_HT5': '1502540941582667786',
     'SMP_LT5': '1502540936385794179',
-
 
     // 5. Diamond SMP
     'Diamond SMP_HT1': '1500755032478322759',
@@ -122,7 +112,6 @@ const ROLE_IDS = {
     'Diamond SMP_HT5': '1500755027587764325',
     'Diamond SMP_LT5': '1500480104046919711',
 
-
     // 6. Pot
     'Pot_HT1': '1502312007460847616',
     'Pot_LT1': '1502311997591781516',
@@ -134,7 +123,6 @@ const ROLE_IDS = {
     'Pot_LT4': '1502312005883793489',
     'Pot_HT5': '1502540238587953252',
     'Pot_LT5': '1502312006458540162',
-
 
     // 7. UHC
     'UHC_HT1': '1502310022292574448',
@@ -148,7 +136,6 @@ const ROLE_IDS = {
     'UHC_HT5': '1502310139074576446',
     'UHC_LT5': '1500756923627208704',
 
-
     // 8. Netherite OP
     'Netherite OP_HT1': '1500756916358479933',
     'Netherite OP_LT1': '1500746484327383120',
@@ -160,7 +147,6 @@ const ROLE_IDS = {
     'Netherite OP_LT4': '1500756915129421946',
     'Netherite OP_HT5': '1500756919428841532',
     'Netherite OP_LT5': '1500756915959889970',
-
 
     // 9. Cart
     'Cart_HT1': '1507231753352253440',
@@ -174,7 +160,6 @@ const ROLE_IDS = {
     'Cart_HT5': '1507231760809726133',
     'Cart_LT5': '1507231904242598038',
 
-
     // 10. Spear Mace
     'Spear Mace_HT1': '1507226546350592110',
     'Spear Mace_LT1': '1507226563777663138',
@@ -184,10 +169,9 @@ const ROLE_IDS = {
     'Spear Mace_LT3': '1507226567703658597',
     'Spear Mace_HT4': '1507226556798341160',
     'Spear Mace_LT4': '1507226568076824619',
-    'Spear Mace_HT5': '1546382650355220530',
+    'Spear Mace_HT5': '1546382650355220530', // <-- Masukkan ID Role Spear Mace HT5 Discord kamu yang benar di sini jika angka ini masih salah
     'Spear Mace_LT5': '1507226568857227395'
 };
-
 
 export default {
     category: 'Tiers',
@@ -213,7 +197,6 @@ export default {
                     { name: 'Australia (AU)', value: 'AU' },
                     { name: 'SouthAmerica (SA)', value: 'SA' }
                 ))
-
         .addStringOption(option => 
             option.setName('username')
                 .setDescription('Minecraft IGN / Username')
@@ -234,7 +217,6 @@ export default {
                     { name: 'Cart', value: 'Cart' },
                     { name: 'Spear Mace', value: 'Spear Mace' }
                 ))
-
         .addStringOption(option => 
             option.setName('previous_rank')
                 .setDescription('Previous rank')
@@ -256,7 +238,6 @@ export default {
 
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-
         const player = interaction.options.getUser('player');
         const tester = interaction.options.getUser('tester');
         const region = interaction.options.getString('region');
@@ -265,8 +246,7 @@ export default {
         const previousRank = interaction.options.getString('previous_rank');
         const rankEarned = interaction.options.getString('rank_earned');
 
-
-        // 1. AUTO UPDATE DISCORD ROLE (PENSOPOTAN ROLE LAMA & PENAMBAHAN ROLE BARU)
+        // 1. AUTO UPDATE DISCORD ROLE
         let roleAddedStatus = '';
         if (interaction.guild) {
             try {
@@ -274,12 +254,9 @@ export default {
                 if (member) {
                     let removedRoleName = '';
 
-                    
-                    // Mencopot role tier lama dari gamemode yang sama jika sebelumnya ada rank
                     if (previousRank !== 'N/A') {
                         const prevRoleKey = `${gamemode}_${previousRank}`;
                         const prevRoleId = ROLE_IDS[prevRoleKey];
-                        
 
                         if (prevRoleId && member.roles.cache.has(prevRoleId)) {
                             const prevRole = interaction.guild.roles.cache.get(prevRoleId);
@@ -288,17 +265,15 @@ export default {
                         }
                     }
 
-                    // Menambahkan role tier baru jika bukan N/A
                     if (rankEarned !== 'N/A') {
                         const roleKey = `${gamemode}_${rankEarned}`;
                         const targetRoleId = ROLE_IDS[roleKey];
 
-
                         if (targetRoleId) {
                             const targetRole = interaction.guild.roles.cache.get(targetRoleId);
                             if (targetRole) {
-                                await member.roles.add(targetRole);
-                                roleAddedStatus = `\n🎖️ Role **${targetRole.name}** has been Gived!`;
+                                await member.roles.add(targetRole).catch(() => null);
+                                roleAddedStatus = `\n🎖️ Role **${targetRole.name}** has been Given!`;
                                 if (removedRoleName) {
                                     roleAddedStatus += ` (Role **${removedRoleName}** lama dicopot)`;
                                 }
@@ -314,10 +289,9 @@ export default {
                 }
             } catch (roleErr) {
                 console.error('❌ Error updating roles:', roleErr);
-                roleAddedStatus = `\n❌ Failed Updating role (Make sure bot Position in Server Settings is above role tier).`;
+                roleAddedStatus = `\n❌ Failed Updating role.`;
             }
         }
-
 
         // 2. SIMPAN KE DATABASE SUPABASE & HITUNG POIN
         if (supabase) {
@@ -335,13 +309,11 @@ export default {
                     .select('id')
                     .single();
 
-
                 if (playerErr) {
                     console.error('❌ Error saving to players:', playerErr);
                 } else if (playerData) {
                     const playerId = playerData.id;
-                    const mappedGamemodeId = GAMEMODE_MAPPING[gamemode] || gamemode.toLowerCase();
-
+                    const mappedGamemodeId = GAMEMODE_MAPPING[gamemode] || gamemode.toLowerCase().replace(/\s+/g, '');
 
                     const { error: tierErr } = await supabase
                         .from('player_tiers')
@@ -354,7 +326,6 @@ export default {
                             }
                         ], { onConflict: 'player_id,gamemode_id' });
 
-
                     if (tierErr) {
                         console.error('❌ Error saving to player_tiers:', tierErr);
                     } else {
@@ -364,18 +335,15 @@ export default {
                             .select('tier')
                             .eq('player_id', playerId);
 
-
                         if (!fetchTiersErr && allTiers) {
                             const totalPoints = allTiers.reduce((sum, item) => {
                                 return sum + (TIER_POINTS[item.tier] || 0);
                             }, 0);
 
-
                             const { error: updatePointErr } = await supabase
                                 .from('players')
                                 .update({ points: totalPoints })
                                 .eq('id', playerId);
-
 
                             if (updatePointErr && updatePointErr.code === 'PGRST204') {
                                 await supabase
@@ -391,10 +359,8 @@ export default {
             }
         }
 
-
         // 3. RENDER AVATAR 3D & EMBED
         const minecraftAvatarUrl = `https://visage.surgeplay.com/bust/512/${username}`;
-
 
         const embed = new EmbedBuilder()
             .setAuthor({ 
@@ -412,7 +378,6 @@ export default {
                 { name: 'Gamemode:', value: `\`${gamemode}\``, inline: false }
             );
 
-
         // 4. KIRIM KE OUTPUT CHANNEL
         try {
             const outputChannel = await client.channels.fetch(OUTPUT_CHANNEL_ID);
@@ -426,10 +391,8 @@ export default {
             console.error('Gagal mengirim ke channel output:', chanErr);
         }
 
-
         return await interaction.editReply({
             content: `✅ Test result has been saved and sent to <#${OUTPUT_CHANNEL_ID}>!${roleAddedStatus}`
         });
     }
 };
-
