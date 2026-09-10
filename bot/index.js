@@ -7,11 +7,11 @@ import {
 } from 'discord.js';
 import { createClient } from '@supabase/supabase-js';
 
-// Import command & interaction handler utama
+// Import command & handler (naik 1 folder ke ../events/ karena index.js ada di dalam /bot/)
 import testresultCommand from './commands/testresult.js';
-import interactionCreateHandler from './events/interactionCreate.js'; // PASTIKAN PATH KE FILE interactionCreate.js BENAR!
+import interactionCreateHandler from '../events/interactionCreate.js';
 
-// 1. Inisialisasi Supabase Client (Utamakan Service Role Key untuk akses tulis bot)
+// 1. Inisialisasi Supabase Client
 const supabaseUrl =
   process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey =
@@ -30,7 +30,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
   },
 });
 
-// 2. Initialize Discord Client
+// 2. Inisialisasi Client Discord
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -40,7 +40,7 @@ const client = new Client({
   ],
 });
 
-// Tempelkan instance supabase ke client agar selalu tersedia di semua command/handler
+// Simpan instance ke client
 client.supabase = supabase;
 client.commands = new Collection();
 client.cooldowns = new Collection();
@@ -54,7 +54,7 @@ if (testresultCommand && testresultCommand.data) {
 client.once('ready', async (readyClient) => {
   console.log(`✅ Bot successfully logged in as ${readyClient.user.tag}`);
 
-  // 4. Safe Sync: Sync Slash Commands dengan Discord API
+  // 4. Synchronize Slash Commands dengan Discord API
   try {
     const token = process.env.DISCORD_TOKEN;
     const clientId = process.env.CLIENT_ID || readyClient.user.id;
@@ -85,11 +85,11 @@ client.once('ready', async (readyClient) => {
 });
 
 // ==========================================
-// 5. EVENT HANDLER UTAMA (DISAMBUNGKAN KE interactionCreate.js)
+// 5. EVENT INTERACTION HANDLER
 // ==========================================
 client.on('interactionCreate', async (interaction) => {
   try {
-    // Serahkan seluruh penanganan (Command, Button, Modal) ke interactionCreateHandler
+    // Eksekusi handler utama dari ../events/interactionCreate.js
     await interactionCreateHandler.execute(interaction, client, supabase);
   } catch (error) {
     console.error('❌ Error handling interaction event:', error);
