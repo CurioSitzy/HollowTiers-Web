@@ -366,7 +366,7 @@ export default {
 
 
                         if (!fetchTiersErr && allTiers) {
-                            const totalPoints  allTiers.reduce((sum, item) => {
+                            const totalPoints = allTiers.reduce((sum, item) => {
                                 return sum + (TIER_POINTS[item.tier] || 0);
                             }, 0);
 
