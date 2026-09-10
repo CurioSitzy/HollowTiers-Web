@@ -7,15 +7,15 @@ import {
 } from 'discord.js';
 import { createClient } from '@supabase/supabase-js';
 
-// Import langsung command testresult secara eksplisit (mencegah error path/ES Module)
+// Import command & interaction handler utama
 import testresultCommand from './commands/testresult.js';
+import interactionCreateHandler from './events/interactionCreate.js'; // PASTIKAN PATH KE FILE interactionCreate.js BENAR!
 
-// 1. Inisialisasi Supabase Client
+// 1. Inisialisasi Supabase Client (Utamakan Service Role Key untuk akses tulis bot)
 const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
   console.warn(
@@ -23,7 +23,12 @@ if (!supabaseUrl || !supabaseKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+  },
+});
 
 // 2. Initialize Discord Client
 const client = new Client({
@@ -35,9 +40,12 @@ const client = new Client({
   ],
 });
 
+// Tempelkan instance supabase ke client agar selalu tersedia di semua command/handler
+client.supabase = supabase;
 client.commands = new Collection();
+client.cooldowns = new Collection();
 
-// 3. Register Command ke Memory secara langsung
+// 3. Register Command ke Memory
 if (testresultCommand && testresultCommand.data) {
   client.commands.set(testresultCommand.data.name, testresultCommand);
 }
@@ -46,7 +54,7 @@ if (testresultCommand && testresultCommand.data) {
 client.once('ready', async (readyClient) => {
   console.log(`✅ Bot successfully logged in as ${readyClient.user.tag}`);
 
-  // 4. Safe Sync: Ambil command bot utama, timpa /testresult saja, lalu upload ulang
+  // 4. Safe Sync: Sync Slash Commands dengan Discord API
   try {
     const token = process.env.DISCORD_TOKEN;
     const clientId = process.env.CLIENT_ID || readyClient.user.id;
@@ -58,58 +66,33 @@ client.once('ready', async (readyClient) => {
         ? Routes.applicationGuildCommands(clientId, guildId)
         : Routes.applicationCommands(clientId);
 
-      // Fetch semua command yang ada di server/bot saat ini
       const existingCommands = await rest.get(route);
 
-      // Ambil daftar command lokal di repo web ini
       const localCommands = Array.from(client.commands.values()).map((cmd) =>
         cmd.data.toJSON ? cmd.data.toJSON() : cmd.data
       );
 
-      // Merge Map: pertahankan command lama, timpa jika namanya sama (/testresult)
       const mergedMap = new Map();
       existingCommands.forEach((cmd) => mergedMap.set(cmd.name, cmd));
       localCommands.forEach((cmd) => mergedMap.set(cmd.name, cmd));
 
       await rest.put(route, { body: Array.from(mergedMap.values()) });
-      console.log(
-        '✅ Commands synchronized safely! /testresult updated without deleting other commands.'
-      );
+      console.log('✅ Commands synchronized safely!');
     }
   } catch (err) {
     console.error('⚠️ Failed to sync commands safely:', err.message);
   }
 });
 
-// Event: Interaction Handler
+// ==========================================
+// 5. EVENT HANDLER UTAMA (DISAMBUNGKAN KE interactionCreate.js)
+// ==========================================
 client.on('interactionCreate', async (interaction) => {
-  if (!interaction.isChatInputCommand()) return;
-
-  const command = client.commands.get(interaction.commandName);
-
-  if (!command) {
-    return interaction.reply({
-      content: 'Command not found.',
-      ephemeral: true,
-    });
-  }
-
   try {
-    // Eksekusi command dan teruskan client + supabase instance
-    await command.execute(interaction, client, supabase);
+    // Serahkan seluruh penanganan (Command, Button, Modal) ke interactionCreateHandler
+    await interactionCreateHandler.execute(interaction, client, supabase);
   } catch (error) {
-    console.error(`Error executing /${interaction.commandName}:`, error);
-
-    const errorMsg = {
-      content: 'There was an error while executing this command.',
-      ephemeral: true,
-    };
-
-    if (interaction.replied || interaction.deferred) {
-      await interaction.followUp(errorMsg);
-    } else {
-      await interaction.reply(errorMsg);
-    }
+    console.error('❌ Error handling interaction event:', error);
   }
 });
 
