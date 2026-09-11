@@ -8,15 +8,15 @@ function getPointsFromTier(tier) {
   if (!tier) return 0;
   const clean = tier.toString().toUpperCase().trim();
   switch (clean) {
-    case 'HT1': return 10;
-    case 'LT1': return 8;
-    case 'HT2': return 7;
-    case 'LT2': return 6;
-    case 'HT3': return 5;
-    case 'LT3': return 4;
-    case 'HT4': case 'TIER 4': return 3;
-    case 'LT4': return 2;
-    case 'HT5': case 'TIER 5': return 1.5;
+    case 'HT1': return 60;
+    case 'LT1': return 45;
+    case 'HT2': return 30;
+    case 'LT2': return 20;
+    case 'HT3': return 10;
+    case 'LT3': return 5;
+    case 'HT4': case 'TIER 4': return 4;
+    case 'LT4': return 3;
+    case 'HT5': case 'TIER 5': return 2;
     case 'LT5': return 1;
     default: return 0;
   }
