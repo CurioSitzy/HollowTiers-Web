@@ -103,8 +103,8 @@ function PlayerModal({ player, gamemodes, onClose }) {
   if (!player) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn">
-      <div className="relative w-full max-w-md bg-zinc-950 border border-zinc-800/90 rounded-3xl p-6 shadow-2xl text-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 transition-all duration-300">
+      <div className="relative w-full max-w-md bg-zinc-950 border border-zinc-800/90 rounded-3xl p-6 shadow-2xl text-white transform transition-all duration-300 scale-100">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-full w-8 h-8 flex items-center justify-center transition"
@@ -430,7 +430,7 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* LIST GAMEMODE DENGAN TOOLTIP FLOATING HOVER */}
+                  {/* LIST GAMEMODE DENGAN ANIMASI FADE-IN & FADE-OUT */}
                   <div className="flex items-center gap-3 overflow-x-visible py-1">
                     {GAMEMODES_LIST.filter((gm) => gm.id !== 'overall').map((gm) => {
                       const tier = player.tiers?.[gm.id];
@@ -455,8 +455,8 @@ export default function Home() {
                           />
                           <TierBadge tier={tier} />
 
-                          {/* FLOATING TOOLTIP BOX POPUP */}
-                          <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center justify-center bg-zinc-900 border border-zinc-700/80 px-3 py-2 rounded-xl shadow-2xl z-50 pointer-events-none min-w-[70px] animate-fadeIn">
+                          {/* FLOATING TOOLTIP DENGAN TRANSISI SMOOTH (FADE IN/OUT) */}
+                          <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 opacity-0 translate-y-1 scale-95 group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100 transition-all duration-200 ease-out pointer-events-none flex flex-col items-center justify-center bg-zinc-900 border border-zinc-700/80 px-3 py-2 rounded-xl shadow-2xl z-50 min-w-[70px]">
                             <span className="text-sm font-black text-white leading-tight">
                               {tier || '-'}
                             </span>
