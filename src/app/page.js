@@ -52,7 +52,16 @@ function RegionBadge({ region }) {
   );
 }
 
-// Komponen Badge Tier Berwarna (WARNA ASLI PUNYA KAMU 100%)
+// Komponen Badge Retired (Global Player)
+function RetiredBadge() {
+  return (
+    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-black border border-zinc-700/80 bg-zinc-800/80 text-zinc-400 tracking-wider uppercase">
+      Retired
+    </span>
+  );
+}
+
+// Komponen Badge Tier Berwarna
 function TierBadge({ tier }) {
   if (!tier) return <span className="text-zinc-600 font-bold">-</span>;
 
@@ -104,7 +113,7 @@ function PlayerModal({ player, gamemodes, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 transition-all duration-300">
-      <div className="relative w-full max-w-md bg-zinc-950 border border-zinc-800/90 rounded-3xl p-6 shadow-2xl text-white transform transition-all duration-300 scale-100">
+      <div className="relative w-full max-w-md bg-zinc-950 border border-zinc-800/90 rounded-3xl p-6 shadow-2xl text-white">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-full w-8 h-8 flex items-center justify-center transition"
@@ -120,8 +129,12 @@ function PlayerModal({ player, gamemodes, onClose }) {
               className="w-full h-full rounded-xl bg-zinc-900 object-cover"
             />
           </div>
-          <h2 className="text-2xl font-black tracking-tight">{player.ign}</h2>
-          <p className="text-xs text-zinc-400 font-medium">HollowTiers Ranked Player</p>
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-black tracking-tight">{player.ign}</h2>
+            <RegionBadge region={player.region} />
+            {player.is_retired && <RetiredBadge />}
+          </div>
+          <p className="text-xs text-zinc-400 font-medium mt-1">HollowTiers Ranked Player</p>
         </div>
 
         <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4 my-5 flex items-center justify-between">
@@ -143,7 +156,11 @@ function PlayerModal({ player, gamemodes, onClose }) {
           {gamemodes
             .filter((gm) => gm.id !== 'overall')
             .map((gm) => {
-              const tier = player.tiers?.[gm.id];
+              const tierData = player.tiers?.[gm.id];
+              const tier = tierData?.tier;
+              const isPeak = tierData?.is_peak;
+              const isGamemodeRetired = tierData?.is_retired;
+
               return (
                 <div
                   key={gm.id}
@@ -155,7 +172,19 @@ function PlayerModal({ player, gamemodes, onClose }) {
                   <span className="text-[10px] font-extrabold uppercase text-zinc-400 tracking-wider mb-1">
                     {gm.name}
                   </span>
-                  <TierBadge tier={tier} />
+                  <div className="flex flex-col items-center gap-0.5">
+                    {isPeak && (
+                      <span className="text-[8px] font-black text-amber-400 uppercase tracking-widest">
+                        PEAK
+                      </span>
+                    )}
+                    <TierBadge tier={tier} />
+                    {isGamemodeRetired && (
+                      <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest">
+                        RETIRED
+                      </span>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -217,9 +246,10 @@ export default function Home() {
         .select('*')
         .order('points', { ascending: false });
 
+      // Fetch player_tiers beserta status is_peak dan is_retired per gamemode
       const { data: tiersData } = await supabase
         .from('player_tiers')
-        .select('player_id, gamemode_id, tier');
+        .select('player_id, gamemode_id, tier, is_peak, is_retired');
 
       if (playersData) {
         const formatted = playersData.map((player) => {
@@ -228,7 +258,11 @@ export default function Home() {
             tiersData
               .filter((t) => t.player_id === player.id)
               .forEach((t) => {
-                playerTiersMap[t.gamemode_id] = t.tier;
+                playerTiersMap[t.gamemode_id] = {
+                  tier: t.tier,
+                  is_peak: t.is_peak || false,
+                  is_retired: t.is_retired || false,
+                };
               });
           }
           return {
@@ -249,11 +283,11 @@ export default function Home() {
     let result = players;
 
     if (activeTab !== 'overall') {
-      result = result.filter((player) => player.tiers?.[activeTab]);
+      result = result.filter((player) => player.tiers?.[activeTab]?.tier);
 
       result = result.sort((a, b) => {
-        const tierA = a.tiers[activeTab];
-        const tierB = b.tiers[activeTab];
+        const tierA = a.tiers[activeTab]?.tier;
+        const tierB = b.tiers[activeTab]?.tier;
 
         const indexA = TIER_RANKING.indexOf(tierA);
         const indexB = TIER_RANKING.indexOf(tierB);
@@ -297,17 +331,19 @@ export default function Home() {
     return <span className="font-extrabold text-zinc-500 text-lg">{rankIndex + 1}.</span>;
   };
 
-  const getTop3Style = (rankIndex) => {
+  const getTop3Style = (rankIndex, isRetired) => {
+    let opacity = isRetired ? 'opacity-70 grayscale-[0.2]' : '';
+    
     if (rankIndex === 0) {
-      return 'bg-gradient-to-r from-amber-950/60 via-zinc-900 to-amber-950/30 border-amber-500/80 shadow-[0_0_20px_rgba(245,158,11,0.2)] hover:border-amber-400 scale-[1.01]';
+      return `bg-gradient-to-r from-amber-950/60 via-zinc-900 to-amber-950/30 border-amber-500/80 shadow-[0_0_20px_rgba(245,158,11,0.2)] hover:border-amber-400 scale-[1.01] ${opacity}`;
     }
     if (rankIndex === 1) {
-      return 'bg-gradient-to-r from-slate-900 via-zinc-900 to-slate-900/50 border-slate-400/70 shadow-[0_0_15px_rgba(148,163,184,0.15)] hover:border-slate-300';
+      return `bg-gradient-to-r from-slate-900 via-zinc-900 to-slate-900/50 border-slate-400/70 shadow-[0_0_15px_rgba(148,163,184,0.15)] hover:border-slate-300 ${opacity}`;
     }
     if (rankIndex === 2) {
-      return 'bg-gradient-to-r from-orange-950/40 via-zinc-900 to-orange-950/20 border-amber-700/70 shadow-[0_0_15px_rgba(180,83,9,0.15)] hover:border-amber-600';
+      return `bg-gradient-to-r from-orange-950/40 via-zinc-900 to-orange-950/20 border-amber-700/70 shadow-[0_0_15px_rgba(180,83,9,0.15)] hover:border-amber-600 ${opacity}`;
     }
-    return 'bg-zinc-900/80 border-zinc-800/80 hover:border-zinc-700';
+    return `bg-zinc-900/80 border-zinc-800/80 hover:border-zinc-700 ${opacity}`;
   };
 
   return (
@@ -388,7 +424,8 @@ export default function Home() {
                   key={player.id}
                   onClick={() => setSelectedPlayer(player)}
                   className={`flex flex-col sm:flex-row sm:items-center justify-between border p-4 rounded-2xl transition gap-4 relative overflow-visible cursor-pointer ${getTop3Style(
-                    player.originalRank
+                    player.originalRank,
+                    player.is_retired
                   )}`}
                 >
                   {player.originalRank === 0 && (
@@ -402,7 +439,7 @@ export default function Home() {
                     <img
                       src={`https://mc-heads.net/avatar/${player.ign}/40`}
                       alt={player.ign}
-                      className={`w-10 h-10 rounded-xl bg-zinc-800 ${
+                      className={`w-10 h-10 rounded-xl bg-zinc-900 ${
                         player.originalRank === 0 ? 'ring-2 ring-amber-400/80' : ''
                       }`}
                     />
@@ -416,26 +453,41 @@ export default function Home() {
                           {player.ign}
                         </h3>
                         <RegionBadge region={player.region} />
+                        {player.is_retired && <RetiredBadge />}
                       </div>
+                      
                       <p className="text-xs text-zinc-400 mt-0.5">
                         {activeTab === 'overall' ? (
                           `${player.points || 0} points`
                         ) : (
                           <span className="flex items-center gap-1 mt-1">
                             Tier:{' '}
-                            <TierBadge tier={player.tiers[activeTab]} />
+                            <TierBadge tier={player.tiers[activeTab]?.tier} />
                           </span>
                         )}
                       </p>
                     </div>
                   </div>
 
-                  {/* LIST GAMEMODE DENGAN ANIMASI FADE-IN & FADE-OUT */}
+                  {/* LIST GAMEMODE DENGAN TOOLTIP HOVER (SUPPORT PEAK & RETIRED) */}
                   <div className="flex items-center gap-3 overflow-x-visible py-1">
                     {GAMEMODES_LIST.filter((gm) => gm.id !== 'overall').map((gm) => {
-                      const tier = player.tiers?.[gm.id];
+                      const tierData = player.tiers?.[gm.id];
+                      const tier = tierData?.tier;
+                      const isPeak = tierData?.is_peak;
+                      const isGamemodeRetired = tierData?.is_retired;
                       const isCurrentTab = gm.id === activeTab;
                       const points = getPointsFromTier(tier);
+
+                      // Menentukan teks status di tooltip (Peak HT3, Retired HT3, atau Peak Retired HT3)
+                      let statusText = tier || '-';
+                      if (isPeak && isGamemodeRetired) {
+                        statusText = `Peak Retired ${tier || ''}`;
+                      } else if (isPeak) {
+                        statusText = `Peak ${tier || ''}`;
+                      } else if (isGamemodeRetired) {
+                        statusText = `Retired ${tier || ''}`;
+                      }
 
                       return (
                         <div
@@ -455,10 +507,10 @@ export default function Home() {
                           />
                           <TierBadge tier={tier} />
 
-                          {/* FLOATING TOOLTIP DENGAN TRANSISI SMOOTH (FADE IN/OUT) */}
-                          <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 opacity-0 translate-y-1 scale-95 group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100 transition-all duration-200 ease-out pointer-events-none flex flex-col items-center justify-center bg-zinc-900 border border-zinc-700/80 px-3 py-2 rounded-xl shadow-2xl z-50 min-w-[70px]">
-                            <span className="text-sm font-black text-white leading-tight">
-                              {tier || '-'}
+                          {/* TOOLTIP POPUP HOVER */}
+                          <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 opacity-0 translate-y-1 scale-95 group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100 transition-all duration-200 ease-out pointer-events-none flex flex-col items-center justify-center bg-zinc-900 border border-zinc-700/80 px-3 py-2 rounded-xl shadow-2xl z-50 min-w-[80px]">
+                            <span className="text-xs font-black text-white leading-tight whitespace-nowrap">
+                              {statusText}
                             </span>
                             <span className="text-[10px] font-bold text-blue-400 whitespace-nowrap mt-0.5">
                               {points} points
