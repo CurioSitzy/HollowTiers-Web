@@ -33,53 +33,50 @@ function RegionBadge({ region }) {
   );
 }
 
-// Komponen Badge Tier Berwarna (Mendukung Status Retired, HT1 - LT5)
+// Komponen Badge Tier Berwarna (HT1 - LT5) + Support Retired
 function TierBadge({ tier }) {
-  if (!tier) return <span className="text-zinc-600 font-bold text-[10px]">-</span>;
+  if (!tier) return <span className="text-zinc-600 font-bold text-[10px] mt-1">-</span>;
 
   const rawTier = tier.toString().trim();
   const isRetired = rawTier.toLowerCase().includes('retired');
-  
-  // Ambil teks tier tanpa kata 'retired' untuk logika warna
   const cleanTier = rawTier.replace(/retired/i, '').trim().toUpperCase();
 
   const getTierStyle = () => {
-    // Jika Retired, gunakan warna abu-abu / muted
     if (isRetired) {
-      return 'bg-zinc-900/90 text-zinc-400 border-zinc-700/80 font-bold opacity-80';
+      return 'bg-zinc-800 text-zinc-400 border-zinc-600';
     }
 
     switch (cleanTier) {
       case 'HT1':
-        return 'bg-gradient-to-r from-amber-500 to-yellow-300 text-black font-black border-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.5)]';
+        return 'bg-yellow-500 text-black border-yellow-300 font-black shadow-[0_0_8px_rgba(234,179,8,0.5)]';
       case 'LT1':
-        return 'bg-amber-950/90 text-amber-300 border-amber-600/80 font-extrabold';
+        return 'bg-amber-600 text-amber-100 border-amber-400 font-extrabold';
       case 'HT2':
-        return 'bg-purple-900/90 text-purple-200 border-purple-500 font-extrabold shadow-[0_0_8px_rgba(168,85,247,0.4)]';
+        return 'bg-purple-600 text-white border-purple-400 font-extrabold shadow-[0_0_8px_rgba(147,51,234,0.5)]';
       case 'LT2':
-        return 'bg-purple-950/80 text-purple-300 border-purple-800/70 font-bold';
+        return 'bg-purple-900/90 text-purple-200 border-purple-500 font-extrabold';
       case 'HT3':
-        return 'bg-red-900/90 text-red-200 border-red-500 font-bold';
+        return 'bg-red-600 text-white border-red-400 font-bold';
       case 'LT3':
-        return 'bg-red-950/80 text-red-300 border-red-800/70 font-bold';
+        return 'bg-red-900/90 text-red-200 border-red-600 font-bold';
       case 'HT4':
       case 'TIER 4':
-        return 'bg-blue-900/80 text-blue-200 border-blue-500 font-semibold';
+        return 'bg-blue-600 text-white border-blue-400 font-semibold';
       case 'LT4':
-        return 'bg-blue-950/80 text-blue-300 border-blue-800/70 font-semibold';
+        return 'bg-blue-900/90 text-blue-200 border-blue-600 font-semibold';
       case 'HT5':
       case 'TIER 5':
-        return 'bg-emerald-950/80 text-emerald-300 border-emerald-800/70 font-medium';
+        return 'bg-emerald-600 text-white border-emerald-400 font-medium';
       case 'LT5':
-        return 'bg-zinc-800 text-zinc-300 border-zinc-700 font-medium';
+        return 'bg-zinc-700 text-zinc-200 border-zinc-500 font-medium';
       default:
-        return 'bg-zinc-800 text-zinc-400 border-zinc-700';
+        return 'bg-zinc-800 text-zinc-300 border-zinc-600';
     }
   };
 
   return (
     <span
-      className={`px-1.5 py-0.5 rounded text-[10px] border tracking-wide uppercase transition-all whitespace-nowrap ${getTierStyle()}`}
+      className={`mt-1 px-1.5 py-0.5 rounded-md text-[10px] font-black border tracking-wider uppercase transition-all whitespace-nowrap shadow-md ${getTierStyle()}`}
     >
       {cleanTier}
     </span>
@@ -418,8 +415,8 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* LIST GAMEMODES & TOOLTIP / BADGES DI BAWAH IKON */}
-                  <div className="flex items-center gap-3 overflow-x-auto py-1">
+                  {/* GAMEMODES LIST WITH HOVER BOX & SOLID BADGES */}
+                  <div className="flex items-center gap-2 overflow-x-auto py-1">
                     {GAMEMODES_LIST.filter((gm) => gm.id !== 'overall').map((gm) => {
                       const tier = player.tiers?.[gm.id];
                       const isCurrentTab = gm.id === activeTab;
@@ -428,39 +425,41 @@ export default function Home() {
                       return (
                         <div
                           key={gm.id}
-                          className={`group relative flex flex-col items-center min-w-[42px] p-1.5 rounded-lg transition-all ${
+                          className={`group relative flex flex-col items-center justify-center min-w-[50px] p-2 rounded-xl transition-all duration-150 cursor-grab active:cursor-grabbing ${
                             isCurrentTab
-                              ? 'bg-red-950/60 border border-red-800/60'
-                              : 'hover:bg-zinc-800/40'
+                              ? 'bg-red-950/40 border border-red-800/60'
+                              : 'hover:bg-zinc-800/80 hover:shadow-lg hover:scale-105 border border-transparent'
                           }`}
                         >
-                          {/* TOOLTIP SAAT HOVER (Mirip Gambar) */}
+                          {/* TOOLTIP HOVER (Status Retired & Points) */}
                           {tier && (
-                            <div className="absolute -top-12 hidden group-hover:flex flex-col items-center justify-center bg-zinc-950 border border-zinc-700 px-3 py-1 rounded-md shadow-2xl z-50 pointer-events-none whitespace-nowrap">
+                            <div className="absolute -top-12 hidden group-hover:flex flex-col items-center justify-center bg-zinc-900 border border-zinc-700 px-3 py-1 rounded-lg shadow-2xl z-50 pointer-events-none whitespace-nowrap">
                               <span className="text-white font-black text-[11px] tracking-wide">
                                 {tier}
                               </span>
-                              <span className="text-[9px] text-red-400 font-semibold">
+                              <span className="text-[9px] text-zinc-400 font-semibold">
                                 {player.points || 0} points
                               </span>
-                              <div className="w-2 h-2 bg-zinc-950 border-r border-b border-zinc-700 rotate-45 -bottom-1 absolute"></div>
+                              <div className="w-2 h-2 bg-zinc-900 border-r border-b border-zinc-700 rotate-45 -bottom-1 absolute"></div>
                             </div>
                           )}
 
                           {/* IKON GAMEMODE */}
-                          <img
-                            src={gm.icon}
-                            alt={gm.name}
-                            className={`w-5 h-5 mb-1 object-contain transition-all ${
-                              isRetired 
-                                ? 'opacity-40 grayscale' 
-                                : isCurrentTab 
-                                  ? 'opacity-100 scale-110' 
-                                  : 'opacity-70'
-                            }`}
-                          />
+                          <div className="w-7 h-7 flex items-center justify-center">
+                            <img
+                              src={gm.icon}
+                              alt={gm.name}
+                              className={`w-6 h-6 object-contain transition-all ${
+                                isRetired
+                                  ? 'opacity-30 grayscale'
+                                  : isCurrentTab
+                                    ? 'opacity-100 scale-110'
+                                    : 'opacity-70 group-hover:opacity-100'
+                              }`}
+                            />
+                          </div>
 
-                          {/* BADGE TIER DI BAWAH IKON */}
+                          {/* BADGE TIER SOLID */}
                           <TierBadge tier={tier} />
                         </div>
                       );
