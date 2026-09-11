@@ -3,6 +3,7 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -26,28 +27,35 @@ body {
 }
 
 /* ==========================================
-   CUSTOM DARK SCROLLBAR (FIX SCROLLBAR PUTIH)
+   FORCE DARK SCROLLBAR UNTUK SELURUH ELEMEN
    ========================================== */
+*, *::before, *::after {
+  scrollbar-width: thin !important;
+  scrollbar-color: #3f3f46 #09090b !important;
+}
+
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px !important;
+  height: 6px !important;
 }
 
 ::-webkit-scrollbar-track {
-  background: #09090b; /* Warna background rel scrollbar */
+  background: #09090b !important;
+  border-radius: 8px !important;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #27272a; /* Warna batang scrollbar (Zinc 800) */
-  border-radius: 9999px;
+  background: #3f3f46 !important;
+  border-radius: 8px !important;
+  border: 1px solid #18181b !important;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46; /* Warna saat di-hover (Zinc 700) */
+  background: #71717a !important;
 }
 
-/* Support Firefox */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: #27272a #09090b;
+::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
