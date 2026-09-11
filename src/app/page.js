@@ -3,6 +3,25 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
+// Helper function untuk menghitung point berdasarkan tier
+function getPointsFromTier(tier) {
+  if (!tier) return 0;
+  const clean = tier.toString().toUpperCase().trim();
+  switch (clean) {
+    case 'HT1': return 10;
+    case 'LT1': return 8;
+    case 'HT2': return 7;
+    case 'LT2': return 6;
+    case 'HT3': return 5;
+    case 'LT3': return 4;
+    case 'HT4': case 'TIER 4': return 3;
+    case 'LT4': return 2;
+    case 'HT5': case 'TIER 5': return 1.5;
+    case 'LT5': return 1;
+    default: return 0;
+  }
+}
+
 // Komponen Badge Region
 function RegionBadge({ region }) {
   const getRegionColor = (reg) => {
@@ -368,7 +387,7 @@ export default function Home() {
                 <div
                   key={player.id}
                   onClick={() => setSelectedPlayer(player)}
-                  className={`flex flex-col sm:flex-row sm:items-center justify-between border p-4 rounded-2xl transition gap-4 relative overflow-hidden cursor-pointer ${getTop3Style(
+                  className={`flex flex-col sm:flex-row sm:items-center justify-between border p-4 rounded-2xl transition gap-4 relative overflow-visible cursor-pointer ${getTop3Style(
                     player.originalRank
                   )}`}
                 >
@@ -411,31 +430,42 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* LIST GAMEMODE DENGAN HOVER GELAP & SEJAJAR */}
-                  <div className="flex items-center gap-2 overflow-x-auto py-1">
+                  {/* LIST GAMEMODE DENGAN TOOLTIP FLOATING HOVER */}
+                  <div className="flex items-center gap-3 overflow-x-visible py-1">
                     {GAMEMODES_LIST.filter((gm) => gm.id !== 'overall').map((gm) => {
                       const tier = player.tiers?.[gm.id];
                       const isCurrentTab = gm.id === activeTab;
+                      const points = getPointsFromTier(tier);
 
                       return (
                         <div
                           key={gm.id}
-                          className={`group flex flex-col items-center justify-center min-w-[46px] p-2 rounded-xl transition-all cursor-grab active:cursor-grabbing ${
+                          className={`group relative flex flex-col items-center justify-center min-w-[38px] p-1 rounded-lg transition-all ${
                             isCurrentTab
-                              ? 'bg-red-950/40 border border-red-800/60'
-                              : 'hover:bg-zinc-800/80 hover:shadow-lg border border-transparent'
+                              ? 'bg-red-950/60 border border-red-800/60'
+                              : 'hover:bg-zinc-800/60'
                           }`}
                         >
                           <img
                             src={gm.icon}
                             alt={gm.name}
-                            className={`w-5 h-5 mb-1.5 object-contain transition-all ${
-                              isCurrentTab
-                                ? 'opacity-100 scale-110'
-                                : 'opacity-70 group-hover:opacity-100'
+                            className={`w-5 h-5 mb-1 object-contain transition-all ${
+                              isCurrentTab ? 'opacity-100 scale-110' : 'opacity-70 group-hover:opacity-100'
                             }`}
                           />
                           <TierBadge tier={tier} />
+
+                          {/* FLOATING TOOLTIP BOX POPUP */}
+                          <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center justify-center bg-zinc-900 border border-zinc-700/80 px-3 py-2 rounded-xl shadow-2xl z-50 pointer-events-none min-w-[70px] animate-fadeIn">
+                            <span className="text-sm font-black text-white leading-tight">
+                              {tier || '-'}
+                            </span>
+                            <span className="text-[10px] font-bold text-blue-400 whitespace-nowrap mt-0.5">
+                              {points} points
+                            </span>
+                            {/* Panah bawah tooltip */}
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-900"></div>
+                          </div>
                         </div>
                       );
                     })}
