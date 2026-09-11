@@ -33,14 +33,23 @@ function RegionBadge({ region }) {
   );
 }
 
-// Komponen Badge Tier Berwarna (HT1 - LT5)
+// Komponen Badge Tier Berwarna (Mendukung Status Retired, HT1 - LT5)
 function TierBadge({ tier }) {
-  if (!tier) return <span className="text-zinc-600 font-bold">-</span>;
+  if (!tier) return <span className="text-zinc-600 font-bold text-[10px]">-</span>;
 
-  const getTierStyle = (t) => {
-    const formattedTier = t.toUpperCase().trim();
+  const rawTier = tier.toString().trim();
+  const isRetired = rawTier.toLowerCase().includes('retired');
+  
+  // Ambil teks tier tanpa kata 'retired' untuk logika warna
+  const cleanTier = rawTier.replace(/retired/i, '').trim().toUpperCase();
 
-    switch (formattedTier) {
+  const getTierStyle = () => {
+    // Jika Retired, gunakan warna abu-abu / muted
+    if (isRetired) {
+      return 'bg-zinc-900/90 text-zinc-400 border-zinc-700/80 font-bold opacity-80';
+    }
+
+    switch (cleanTier) {
       case 'HT1':
         return 'bg-gradient-to-r from-amber-500 to-yellow-300 text-black font-black border-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.5)]';
       case 'LT1':
@@ -70,11 +79,9 @@ function TierBadge({ tier }) {
 
   return (
     <span
-      className={`px-1.5 py-0.5 rounded text-[10px] border tracking-wide uppercase transition-all ${getTierStyle(
-        tier
-      )}`}
+      className={`px-1.5 py-0.5 rounded text-[10px] border tracking-wide uppercase transition-all whitespace-nowrap ${getTierStyle()}`}
     >
-      {tier}
+      {cleanTier}
     </span>
   );
 }
@@ -124,7 +131,6 @@ function PlayerModal({ player, gamemodes, onClose }) {
           {gamemodes
             .filter((gm) => gm.id !== 'overall')
             .map((gm) => {
-              // ✅ Menggunakan ID asli gamemode tanpa menukarnya ke 'crystal'
               const tier = player.tiers?.[gm.id];
               return (
                 <div
@@ -230,13 +236,12 @@ export default function Home() {
   const getFilteredPlayers = () => {
     let result = players;
 
-    // ✅ Menggunakan activeTab langsung tanpa dikonversi ke 'crystal'
     if (activeTab !== 'overall') {
       result = result.filter((player) => player.tiers?.[activeTab]);
 
       result = result.sort((a, b) => {
-        const tierA = a.tiers[activeTab];
-        const tierB = b.tiers[activeTab];
+        const tierA = (a.tiers[activeTab] || '').replace(/retired/i, '').trim();
+        const tierB = (b.tiers[activeTab] || '').replace(/retired/i, '').trim();
 
         const indexA = TIER_RANKING.indexOf(tierA);
         const indexB = TIER_RANKING.indexOf(tierB);
@@ -406,7 +411,6 @@ export default function Home() {
                         ) : (
                           <span className="flex items-center gap-1 mt-1">
                             Tier:{' '}
-                            {/* ✅ Mengambil tier dengan activeTab secara langsung */}
                             <TierBadge tier={player.tiers[activeTab]} />
                           </span>
                         )}
@@ -414,27 +418,49 @@ export default function Home() {
                     </div>
                   </div>
 
+                  {/* LIST GAMEMODES & TOOLTIP / BADGES DI BAWAH IKON */}
                   <div className="flex items-center gap-3 overflow-x-auto py-1">
                     {GAMEMODES_LIST.filter((gm) => gm.id !== 'overall').map((gm) => {
-                      // ✅ Mengambil tier dari gm.id langsung
                       const tier = player.tiers?.[gm.id];
                       const isCurrentTab = gm.id === activeTab;
+                      const isRetired = tier?.toString().toLowerCase().includes('retired');
+
                       return (
                         <div
                           key={gm.id}
-                          className={`flex flex-col items-center min-w-[38px] p-1 rounded-lg ${
+                          className={`group relative flex flex-col items-center min-w-[42px] p-1.5 rounded-lg transition-all ${
                             isCurrentTab
                               ? 'bg-red-950/60 border border-red-800/60'
-                              : ''
+                              : 'hover:bg-zinc-800/40'
                           }`}
                         >
+                          {/* TOOLTIP SAAT HOVER (Mirip Gambar) */}
+                          {tier && (
+                            <div className="absolute -top-12 hidden group-hover:flex flex-col items-center justify-center bg-zinc-950 border border-zinc-700 px-3 py-1 rounded-md shadow-2xl z-50 pointer-events-none whitespace-nowrap">
+                              <span className="text-white font-black text-[11px] tracking-wide">
+                                {tier}
+                              </span>
+                              <span className="text-[9px] text-red-400 font-semibold">
+                                {player.points || 0} points
+                              </span>
+                              <div className="w-2 h-2 bg-zinc-950 border-r border-b border-zinc-700 rotate-45 -bottom-1 absolute"></div>
+                            </div>
+                          )}
+
+                          {/* IKON GAMEMODE */}
                           <img
                             src={gm.icon}
                             alt={gm.name}
-                            className={`w-5 h-5 mb-1 object-contain ${
-                              isCurrentTab ? 'opacity-100 scale-110' : 'opacity-70'
+                            className={`w-5 h-5 mb-1 object-contain transition-all ${
+                              isRetired 
+                                ? 'opacity-40 grayscale' 
+                                : isCurrentTab 
+                                  ? 'opacity-100 scale-110' 
+                                  : 'opacity-70'
                             }`}
                           />
+
+                          {/* BADGE TIER DI BAWAH IKON */}
                           <TierBadge tier={tier} />
                         </div>
                       );
