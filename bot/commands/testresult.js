@@ -253,7 +253,7 @@ export default {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const player = interaction.options.getUser('player');
-        const tester = interaction.options.getUser('tester');f
+        const tester = interaction.options.getUser('tester');
         const region = interaction.options.getString('region');
         const username = interaction.options.getString('username');
         const gamemode = interaction.options.getString('gamemode');
