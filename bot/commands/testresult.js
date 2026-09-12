@@ -44,7 +44,8 @@ const GAMEMODE_MAPPING = {
     'UHC': 'uhc',
     'Netherite OP': 'nethop',
     'Cart': 'cart',
-    'Spear Mace': 'spearmace'
+    'Spear Mace': 'spearmace',
+    'Mace': 'mace' // <-- GAMEMODE MACE MAPPING
 };
 
 // =========================================================
@@ -169,8 +170,20 @@ const ROLE_IDS = {
     'Spear Mace_LT3': '1507226567703658597',
     'Spear Mace_HT4': '1507226556798341160',
     'Spear Mace_LT4': '1507226568076824619',
-    'Spear Mace_HT5': '1546382650355220530', // <-- Masukkan ID Role Spear Mace HT5 Discord kamu yang benar di sini jika angka ini masih salah
-    'Spear Mace_LT5': '1507226568857227395'
+    'Spear Mace_HT5': '1546382650355220530',
+    'Spear Mace_LT5': '1507226568857227395',
+
+    // 11. Mace (Ganti string ID dengan ID Role Discord server kamu)
+    'Mace_HT1': 'MASUKKAN_ID_ROLE_MACE_HT1',
+    'Mace_LT1': 'MASUKKAN_ID_ROLE_MACE_LT1',
+    'Mace_HT2': 'MASUKKAN_ID_ROLE_MACE_HT2',
+    'Mace_LT2': 'MASUKKAN_ID_ROLE_MACE_LT2',
+    'Mace_HT3': 'MASUKKAN_ID_ROLE_MACE_HT3',
+    'Mace_LT3': 'MASUKKAN_ID_ROLE_MACE_LT3',
+    'Mace_HT4': 'MASUKKAN_ID_ROLE_MACE_HT4',
+    'Mace_LT4': 'MASUKKAN_ID_ROLE_MACE_LT4',
+    'Mace_HT5': 'MASUKKAN_ID_ROLE_MACE_HT5',
+    'Mace_LT5': 'MASUKKAN_ID_ROLE_MACE_LT5'
 };
 
 export default {
@@ -215,7 +228,8 @@ export default {
                     { name: 'UHC', value: 'UHC' },
                     { name: 'Netherite OP', value: 'Netherite OP' },
                     { name: 'Cart', value: 'Cart' },
-                    { name: 'Spear Mace', value: 'Spear Mace' }
+                    { name: 'Spear Mace', value: 'Spear Mace' },
+                    { name: 'Mace', value: 'Mace' } // <-- Pilihan Gamemode Mace
                 ))
         .addStringOption(option => 
             option.setName('previous_rank')
