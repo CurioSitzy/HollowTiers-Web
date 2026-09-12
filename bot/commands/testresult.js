@@ -174,16 +174,16 @@ const ROLE_IDS = {
     'Spear Mace_LT5': '1507226568857227395',
 
     // 11. Mace (Ganti string ID dengan ID Role Discord server kamu)
-    'Mace_HT1': 'MASUKKAN_ID_ROLE_MACE_HT1',
-    'Mace_LT1': 'MASUKKAN_ID_ROLE_MACE_LT1',
-    'Mace_HT2': 'MASUKKAN_ID_ROLE_MACE_HT2',
-    'Mace_LT2': 'MASUKKAN_ID_ROLE_MACE_LT2',
-    'Mace_HT3': 'MASUKKAN_ID_ROLE_MACE_HT3',
-    'Mace_LT3': 'MASUKKAN_ID_ROLE_MACE_LT3',
-    'Mace_HT4': 'MASUKKAN_ID_ROLE_MACE_HT4',
-    'Mace_LT4': 'MASUKKAN_ID_ROLE_MACE_LT4',
-    'Mace_HT5': 'MASUKKAN_ID_ROLE_MACE_HT5',
-    'Mace_LT5': 'MASUKKAN_ID_ROLE_MACE_LT5'
+    'Mace_HT1': '1500479159468822567',
+    'Mace_LT1': '1500479159468822563',
+    'Mace_HT2': '1500479159468822566',
+    'Mace_LT2': '1500479159468822562',
+    'Mace_HT3': '1500479159468822565',
+    'Mace_LT3': '1500479159468822561',
+    'Mace_HT4': '1500479159477080084',
+    'Mace_LT4': '1500479159468822560',
+    'Mace_HT5': '1500479159468822564',
+    'Mace_LT5': '1500479159468822559'
 };
 
 export default {
@@ -253,7 +253,7 @@ export default {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const player = interaction.options.getUser('player');
-        const tester = interaction.options.getUser('tester');
+        const tester = interaction.options.getUser('tester');f
         const region = interaction.options.getString('region');
         const username = interaction.options.getString('username');
         const gamemode = interaction.options.getString('gamemode');
@@ -289,7 +289,7 @@ export default {
                                 await member.roles.add(targetRole).catch(() => null);
                                 roleAddedStatus = `\n🎖️ Role **${targetRole.name}** has been Given!`;
                                 if (removedRoleName) {
-                                    roleAddedStatus += ` (Role **${removedRoleName}** lama dicopot)`;
+                                    roleAddedStatus += ` (Role **${removedRoleName}** old tier roles has been removed!)`;
                                 }
                             } else {
                                 roleAddedStatus = `\n⚠️ Role ID registered but role doesn't exist on server!`;
